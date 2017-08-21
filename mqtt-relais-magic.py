@@ -19,6 +19,7 @@ ampel = 'unknown'
 
 
 class Relay:
+
     global bus
 
     def __init__(self):
@@ -56,7 +57,21 @@ class Relay:
     def green(self, state):
         self.__set_relay__(3, state)
 
+    def set_trafficlight(self, red=False, yellow=False, green=False):
+        self.red(red)
+        self.yellow(yellow)
+        self.green(green)
+        return self.__get_trafficlight_state__(red=red, yellow=yellow, green=green)
 
+    def __get_trafficlight_state__(self, **kwargs):
+        light_state = ""
+        for argument in kwargs.keys():
+            if light_state:
+                light_state += "-"
+            if kwargs[argument]:
+                light_state += argument
+
+        return light_state
 
 if __name__ == "__main__":
     path = os.path.dirname(os.path.realpath(__file__))
@@ -73,10 +88,7 @@ if __name__ == "__main__":
     # catch SIGINT
     def endProcess(signalnum=None, handler=None):
         relay.strom(True)
-
-        relay.red(True)
-        relay.yellow(False)
-        relay.green(True)
+        relay.set_traffic_light(red=True, green=True)
 
         try:
             client.loop_stop()
@@ -135,35 +147,19 @@ if __name__ == "__main__":
         
         # Club ist offen, Schloss ist offen -> Gruen
         if clubstatus and not schlossstatus and ampel != 'green':
-            relay.red(False)
-            relay.yellow(False)
-            relay.green(True)
-            
-            ampel = 'green'
-        
+            ampel = relay.set_traffic_light(green=True)
+
         # Club ist zu, Schloss ist offen -> Gelb
         elif not clubstatus and not schlossstatus and ampel != 'yellow':
-            relay.red(False)
-            relay.yellow(True)
-            relay.green(False)
-            
-            ampel = 'yellow'
-        
+            ampel = relay.set_traffic_light(yellow=True)
+
         # Club ist offen, Schloss ist zu -> Gelb-Rot
-        elif clubstatus and schlossstatus and ampel != 'yellow-red':
-            relay.red(True)
-            relay.yellow(True)
-            relay.green(False)
-            
-            ampel = 'yellow-red'
+        elif clubstatus and schlossstatus and ampel != 'red-yellow':
+            ampel = relay.set_traffic_light(red=True, yellow=True)
 
         # everything else -> Rot
         elif not clubstatus and schlossstatus and ampel != 'red':
-            relay.red(True)
-            relay.yellow(False)
-            relay.green(False)
-            
-            ampel = 'red'
+            ampel = relay.set_traffic_light(red=True)
 
         # print log
         print(time.strftime("%Y-%m-%d %H:%M:%S")
