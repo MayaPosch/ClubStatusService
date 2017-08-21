@@ -17,7 +17,8 @@ stromstatus = False
 
 ampel = 'unknown'
 
-class Relay():
+
+class Relay:
     global bus
 
     def __init__(self):
@@ -28,7 +29,7 @@ class Relay():
 
     def strom(self, state): # relay 1
         if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 0)
+            self.DEVICE_REG_DATA &= ~(0x1 << 0)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
             self.DEVICE_REG_DATA |= (0x1 << 0)
@@ -36,7 +37,7 @@ class Relay():
 
     def yellow(self, state): # relay 2
         if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 1)
+            self.DEVICE_REG_DATA &= ~(0x1 << 1)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
             self.DEVICE_REG_DATA |= (0x1 << 1)
@@ -44,7 +45,7 @@ class Relay():
 
     def red(self, state): # relay 3
         if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 2)
+            self.DEVICE_REG_DATA &= ~(0x1 << 2)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
             self.DEVICE_REG_DATA |= (0x1 << 2)
@@ -52,16 +53,16 @@ class Relay():
 
     def green(self, state): # relay 4
         if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 3)
+            self.DEVICE_REG_DATA &= ~(0x1 << 3)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
             self.DEVICE_REG_DATA |= (0x1 << 3)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     path = os.path.dirname(os.path.realpath(__file__))
+
     # read config
     config = configparser.ConfigParser()
     config['mqtt'] = {'host': 'localhost', 'port': 1883, 'auth': 'no'}
@@ -72,7 +73,7 @@ if __name__=="__main__":
     relay = Relay()
 
     # catch SIGINT
-    def endProcess(signalnum = None, handler = None):
+    def endProcess(signalnum=None, handler=None):
         relay.strom(True)
 
         relay.red(True)
@@ -115,8 +116,9 @@ if __name__=="__main__":
             client.publish("/public/eden/clubstatus", int(state))
         last_state = state
         
-    	if state:
-	        last_clubstatus = int(time.time())
+
+        if state:
+            last_clubstatus = int(time.time())
 
         clubstatus = state
         
@@ -129,7 +131,7 @@ if __name__=="__main__":
             stromstatus = True
 
         if last_clubstatus < (int(time.time())-20) and stromstatus:
-    	    relay.strom(False)
+            relay.strom(False)
             stromstatus = False
 
         # Ampel
@@ -144,7 +146,7 @@ if __name__=="__main__":
         
         # Club ist zu, Schloss ist offen -> Gelb
         elif not clubstatus and not schlossstatus and ampel != 'yellow':
-            relay.rede(False)
+            relay.red(False)
             relay.yellow(True)
             relay.green(False)
             
@@ -167,6 +169,10 @@ if __name__=="__main__":
             ampel = 'red'
 
         # print log
-        print(time.strftime("%Y-%m-%d %H:%M:%S") + " | Club: " + str(clubstatus) + " - Schloss: " + str(schlossstatus) + " - Strom: " + str(stromstatus) + " - Ampel: " + ampel)
+        print(time.strftime("%Y-%m-%d %H:%M:%S")
+              + " | Club: " + str(clubstatus)
+              + " - Schloss: " + str(schlossstatus)
+              + " - Strom: " + str(stromstatus)
+              + " - Ampel: " + ampel)
 
 # EOF
