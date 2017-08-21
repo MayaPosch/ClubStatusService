@@ -27,37 +27,35 @@ class Relay:
         self.DEVICE_REG_DATA = 0xff
         bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
-    def strom(self, state): # relay 1
+    def __set_relay__(self, relay, state):
+        """ Set the relay state
+        :param relay: Relay to set
+        :type relay: int
+        :param state: Target state of the relay
+        :type state: bool
+        :return: None
+        """
+        if relay not in range(0, 3):
+            raise IndexError("You are trying to set relay %d" % relay)
         if state:
-            self.DEVICE_REG_DATA &= ~(0x1 << 0)
+            self.DEVICE_REG_DATA &= ~(0x1 << relay)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
-            self.DEVICE_REG_DATA |= (0x1 << 0)
+            self.DEVICE_REG_DATA |= (0x1 << relay)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
-    def yellow(self, state): # relay 2
-        if state:
-            self.DEVICE_REG_DATA &= ~(0x1 << 1)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 1)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def strom(self, state):
+        self.__set_relay__(0, state)
 
-    def red(self, state): # relay 3
-        if state:
-            self.DEVICE_REG_DATA &= ~(0x1 << 2)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 2)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def yellow(self, state):
+        self.__set_relay__(1, state)
 
-    def green(self, state): # relay 4
-        if state:
-            self.DEVICE_REG_DATA &= ~(0x1 << 3)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 3)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def red(self, state):
+        self.__set_relay__(2, state)
+
+    def green(self, state):
+        self.__set_relay__(3, state)
+
 
 
 if __name__ == "__main__":
