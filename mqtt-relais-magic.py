@@ -110,12 +110,11 @@ if __name__ == "__main__":
         time.sleep(1)
         
         # Clubstatus
-        state = False if GPIO.input(7) else True
+        state = not bool(GPIO.input(7))
 
         if state != last_state or i % 10 == 0:
             client.publish("/public/eden/clubstatus", int(state))
         last_state = state
-        
 
         if state:
             last_clubstatus = int(time.time())
@@ -123,7 +122,7 @@ if __name__ == "__main__":
         clubstatus = state
         
         # Schloss
-        schlossstatus = True if GPIO.input(11) else False
+        schlossstatus = bool(GPIO.input(11))
 
         # Strom
         if last_clubstatus > (int(time.time())-20) and not stromstatus:
