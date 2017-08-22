@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # catch SIGINT
     def endProcess(signalnum=None, handler=None):
         relay.strom(True)
-        relay.set_traffic_light(red=True, green=True)
+        relay.set_trafficlight(red=True, green=True)
 
         try:
             client.loop_stop()
@@ -147,19 +147,19 @@ if __name__ == "__main__":
         
         # Club ist offen, Schloss ist offen -> Gruen
         if clubstatus and not schlossstatus and ampel != 'green':
-            ampel = relay.set_traffic_light(green=True)
+            ampel = relay.set_trafficlight(green=True)
 
         # Club ist zu, Schloss ist offen -> Gelb
         elif not clubstatus and not schlossstatus and ampel != 'yellow':
-            ampel = relay.set_traffic_light(yellow=True)
+            ampel = relay.set_trafficlight(yellow=True)
 
         # Club ist offen, Schloss ist zu -> Gelb-Rot
         elif clubstatus and schlossstatus and ampel != 'red-yellow':
-            ampel = relay.set_traffic_light(red=True, yellow=True)
+            ampel = relay.set_trafficlight(red=True, yellow=True)
 
         # everything else -> Rot
         elif not clubstatus and schlossstatus and ampel != 'red':
-            ampel = relay.set_traffic_light(red=True)
+            ampel = relay.set_trafficlight(red=True)
 
         # print log
         print(time.strftime("%Y-%m-%d %H:%M:%S")
