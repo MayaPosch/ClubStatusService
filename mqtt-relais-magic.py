@@ -73,7 +73,7 @@ class Relay:
 
         return light_state
 
-if __name__ == "__main__":
+def main():
     path = os.path.dirname(os.path.realpath(__file__))
 
     # read config
@@ -168,4 +168,7 @@ if __name__ == "__main__":
               + " - Strom: " + str(stromstatus)
               + " - Ampel: " + ampel)
 
-# EOF
+if __name__ == "__main__":
+    main()
+
+#EOF
