@@ -74,6 +74,8 @@ class Relay:
         return light_state
 
 def main():
+    global bus
+
     path = os.path.dirname(os.path.realpath(__file__))
 
     # read config
