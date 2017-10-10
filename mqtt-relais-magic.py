@@ -17,7 +17,9 @@ stromstatus = False
 
 ampel = 'unknown'
 
-class Relay():
+
+class Relay:
+
     global bus
 
     def __init__(self):
@@ -26,42 +28,54 @@ class Relay():
         self.DEVICE_REG_DATA = 0xff
         bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
-    def strom(self, state): # relay 1
+    def __set_relay__(self, relay, state):
+        """ Set the relay state
+        :param relay: Relay to set
+        :type relay: int
+        :param state: Target state of the relay
+        :type state: bool
+        :return: None
+        """
+        if relay not in range(0, 3):
+            raise IndexError("You are trying to set relay %d" % relay)
         if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 0)
+            self.DEVICE_REG_DATA &= ~(0x1 << relay)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
         else:
-            self.DEVICE_REG_DATA |= (0x1 << 0)
+            self.DEVICE_REG_DATA |= (0x1 << relay)
             bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
 
-    def yellow(self, state): # relay 2
-        if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 1)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 1)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def strom(self, state):
+        self.__set_relay__(0, state)
 
-    def red(self, state): # relay 3
-        if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 2)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 2)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def yellow(self, state):
+        self.__set_relay__(1, state)
 
-    def green(self, state): # relay 4
-        if state:
-            self.DEVICE_REG_DATA &=  ~(0x1 << 3)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
-        else:
-            self.DEVICE_REG_DATA |= (0x1 << 3)
-            bus.write_byte_data(self.DEVICE_ADDRESS, self.DEVICE_REG_MODE1, self.DEVICE_REG_DATA)
+    def red(self, state):
+        self.__set_relay__(2, state)
 
+    def green(self, state):
+        self.__set_relay__(3, state)
 
+    def set_trafficlight(self, red=False, yellow=False, green=False):
+        self.red(red)
+        self.yellow(yellow)
+        self.green(green)
+        return self.__get_trafficlight_state__(red=red, yellow=yellow, green=green)
 
-if __name__=="__main__":
+    def __get_trafficlight_state__(self, **kwargs):
+        light_state = ""
+        for argument in kwargs.keys():
+            if light_state:
+                light_state += "-"
+            if kwargs[argument]:
+                light_state += argument
+
+        return light_state
+
+def main():
     path = os.path.dirname(os.path.realpath(__file__))
+
     # read config
     config = configparser.ConfigParser()
     config['mqtt'] = {'host': 'localhost', 'port': 1883, 'auth': 'no'}
@@ -72,12 +86,9 @@ if __name__=="__main__":
     relay = Relay()
 
     # catch SIGINT
-    def endProcess(signalnum = None, handler = None):
+    def endProcess(signalnum=None, handler=None):
         relay.strom(True)
-
-        relay.red(True)
-        relay.yellow(False)
-        relay.green(True)
+        relay.set_trafficlight(red=True, green=True)
 
         try:
             client.loop_stop()
@@ -109,19 +120,19 @@ if __name__=="__main__":
         time.sleep(1)
         
         # Clubstatus
-        state = False if GPIO.input(7) else True
+        state = not bool(GPIO.input(7))
 
         if state != last_state or i % 10 == 0:
             client.publish("/public/eden/clubstatus", int(state))
         last_state = state
-        
-    	if state:
-	        last_clubstatus = int(time.time())
+
+        if state:
+            last_clubstatus = int(time.time())
 
         clubstatus = state
         
         # Schloss
-        schlossstatus = True if GPIO.input(11) else False
+        schlossstatus = bool(GPIO.input(11))
 
         # Strom
         if last_clubstatus > (int(time.time())-20) and not stromstatus:
@@ -129,44 +140,35 @@ if __name__=="__main__":
             stromstatus = True
 
         if last_clubstatus < (int(time.time())-20) and stromstatus:
-    	    relay.strom(False)
+            relay.strom(False)
             stromstatus = False
 
         # Ampel
         
         # Club ist offen, Schloss ist offen -> Gruen
         if clubstatus and not schlossstatus and ampel != 'green':
-            relay.red(False)
-            relay.yellow(False)
-            relay.green(True)
-            
-            ampel = 'green'
-        
+            ampel = relay.set_trafficlight(green=True)
+
         # Club ist zu, Schloss ist offen -> Gelb
         elif not clubstatus and not schlossstatus and ampel != 'yellow':
-            relay.rede(False)
-            relay.yellow(True)
-            relay.green(False)
-            
-            ampel = 'yellow'
-        
+            ampel = relay.set_trafficlight(yellow=True)
+
         # Club ist offen, Schloss ist zu -> Gelb-Rot
-        elif clubstatus and schlossstatus and ampel != 'yellow-red':
-            relay.red(True)
-            relay.yellow(True)
-            relay.green(False)
-            
-            ampel = 'yellow-red'
+        elif clubstatus and schlossstatus and ampel != 'red-yellow':
+            ampel = relay.set_trafficlight(red=True, yellow=True)
 
         # everything else -> Rot
         elif not clubstatus and schlossstatus and ampel != 'red':
-            relay.red(True)
-            relay.yellow(False)
-            relay.green(False)
-            
-            ampel = 'red'
+            ampel = relay.set_trafficlight(red=True)
 
         # print log
-        print(time.strftime("%Y-%m-%d %H:%M:%S") + " | Club: " + str(clubstatus) + " - Schloss: " + str(schlossstatus) + " - Strom: " + str(stromstatus) + " - Ampel: " + ampel)
+        print(time.strftime("%Y-%m-%d %H:%M:%S")
+              + " | Club: " + str(clubstatus)
+              + " - Schloss: " + str(schlossstatus)
+              + " - Strom: " + str(stromstatus)
+              + " - Ampel: " + ampel)
 
-# EOF
+if __name__ == "__main__":
+    main()
+
+#EOF
