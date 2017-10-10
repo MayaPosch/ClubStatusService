@@ -73,8 +73,7 @@ class Relay:
 
         return light_state
 
-def main():
-    global bus
+if __name__ == "__main__":
 
     path = os.path.dirname(os.path.realpath(__file__))
 
@@ -169,8 +168,5 @@ def main():
               + " - Schloss: " + str(schlossstatus)
               + " - Strom: " + str(stromstatus)
               + " - Ampel: " + ampel)
-
-if __name__ == "__main__":
-    main()
 
 #EOF
