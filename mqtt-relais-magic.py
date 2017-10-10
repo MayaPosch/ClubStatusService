@@ -36,7 +36,7 @@ class Relay:
         :type state: bool
         :return: None
         """
-        if relay not in range(0, 3):
+        if relay not in range(4):
             raise IndexError("You are trying to set relay %d" % relay)
         if state:
             self.DEVICE_REG_DATA &= ~(0x1 << relay)
