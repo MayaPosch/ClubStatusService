@@ -156,7 +156,7 @@ if __name__ == "__main__":
         elif not clubstatus and not schlossstatus and ampel != 'yellow-':
             ampel = relay.set_trafficlight(yellow=True)
 
-            os.system('ssh voellerei -t "effect.pl windows/XP_shutdown"')
+            os.system('ssh voellerei -t "effect.pl windows/XP_shutdown && effect.pl bahn/Stadtbahn && effect.pl bahn/Wertgegenstaende"')
 
         # Club ist offen, Schloss ist zu -> Gelb-Rot
         elif clubstatus and schlossstatus and ampel != 'red-yellow':
