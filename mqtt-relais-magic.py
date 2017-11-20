@@ -115,6 +115,7 @@ if __name__ == "__main__":
     GPIO.setup(11, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     
     last_state = None
+    old_clubstatus = None
 
     # loop forever
     for i in itertools.count():
@@ -125,11 +126,13 @@ if __name__ == "__main__":
 
         if state != last_state or i % 10 == 0:
             client.publish("/public/eden/clubstatus", int(state))
+        
         last_state = state
 
         if state:
             last_clubstatus = int(time.time())
 
+        old_clubstatus = clubstatus
         clubstatus = state
         
         # Schloss
@@ -149,14 +152,10 @@ if __name__ == "__main__":
         # Club ist offen, Schloss ist offen -> Gruen
         if clubstatus and not schlossstatus and ampel != 'green--':
             ampel = relay.set_trafficlight(green=True)
-            
-            os.system('ssh voellerei -t "effect.pl windows/XP_start"')
 
         # Club ist zu, Schloss ist offen -> Gelb
         elif not clubstatus and not schlossstatus and ampel != 'yellow-':
             ampel = relay.set_trafficlight(yellow=True)
-
-            os.system('ssh voellerei -t "effect.pl windows/XP_shutdown && effect.pl bahn/Stadtbahn && effect.pl bahn/Wertgegenstaende"')
 
         # Club ist offen, Schloss ist zu -> Gelb-Rot
         elif clubstatus and schlossstatus and ampel != 'red-yellow':
@@ -165,6 +164,16 @@ if __name__ == "__main__":
         # everything else -> Rot
         elif not clubstatus and schlossstatus and ampel != 'red':
             ampel = relay.set_trafficlight(red=True)
+
+        # Sound
+
+        # Club wurde geoeffnet
+        if clubstatus and not old_clubstatus:
+            os.system('/home/entropia/club-auf.sh')
+
+        # Club wurde geschlossen
+        elif old_clubstatus and not clubstatus:
+            os.system('/home/entropia/club-zu.sh')
 
         # print log
         print(time.strftime("%Y-%m-%d %H:%M:%S")
