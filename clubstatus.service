@@ -1,0 +1,10 @@
+[Unit]
+Description=ClubStatus monitoring & control
+
+[Service]
+ExecStart= /home/user/clubstatus/clubstatus /home/user/clubstatus/config.ini
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

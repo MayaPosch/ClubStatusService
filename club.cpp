@@ -1,0 +1,328 @@
+/*
+	club.cpp - Implementation of the Club class.
+	
+	Revision 0
+	
+	Notes:
+			- 
+			
+	2018/02/28, Maya Posch
+*/
+
+
+#include "club.h"
+
+#include <iostream>
+
+using namespace std;
+
+
+#include <Poco/NumberFormatter.h>
+
+using namespace Poco;
+
+
+#include "listener.h"
+
+
+#define REG_INPUT_PORT0              0x00
+#define REG_INPUT_PORT1              0x01
+#define REG_OUTPUT_PORT0             0x02
+#define REG_OUTPUT_PORT1             0x03
+#define REG_POL_INV_PORT0            0x04
+#define REG_POL_INV_PORT1            0x05
+#define REG_CONF_PORT0               0x06
+#define REG_CONG_PORT1               0x07
+#define REG_OUT_DRV_STRENGTH_PORT0_L 0x40
+#define REG_OUT_DRV_STRENGTH_PORT0_H 0x41
+#define REG_OUT_DRV_STRENGTH_PORT1_L 0x42
+#define REG_OUT_DRV_STRENGTH_PORT1_H 0x43
+#define REG_INPUT_LATCH_PORT0        0x44
+#define REG_INPUT_LATCH_PORT1        0x45
+#define REG_PUD_EN_PORT0             0x46
+#define REG_PUD_EN_PORT1             0x47
+#define REG_PUD_SEL_PORT0            0x48
+#define REG_PUD_SEL_PORT1            0x49
+#define REG_INT_MASK_PORT0           0x4A
+#define REG_INT_MASK_PORT1           0x4B
+#define REG_INT_STATUS_PORT0         0x4C
+#define REG_INT_STATUS_PORT1         0x4D
+#define REG_OUTPUT_PORT_CONF         0x4F
+
+#define RELAY_POWER 0
+#define RELAY_GREEN 1
+#define RELAY_YELLOW 2
+#define RELAY_RED 3
+
+
+// Static initialisations.
+bool Club::clubOff;
+bool Club::clubLocked;
+bool Club::powerOn;
+Thread Club::updateThread;
+ClubUpdater Club::updater;
+bool Club::relayActive;
+uint8_t Club::relayAddress;
+string Club::mqttTopic;
+Listener* Club::mqtt;
+
+Condition Club::clubCnd;
+Mutex Club::clubCndMutex;
+bool Club::clubChanged = false;
+bool Club::running = false;
+bool Club::clubIsClosed = true;
+
+
+// === CLUB UPDATER ===
+// --- RUN ---
+void ClubUpdater::run() {
+	// Defaults.
+	regDir0 = 0x00;
+	regOut0 = 0x00;
+	Club::powerOn = false;
+	
+	if (Club::relayActive) {
+		// First pulse the i2c's SCL a few times in order to unlock any frozen devices.
+		// TODO:
+	
+		// Start the i2c bus and check for presence of the relay board.
+		// i2c address: 0x20.
+		cout << "ClubUpdater: Starting i2c relay device." << endl;
+		i2cHandle = wiringPiI2CSetup(Club::relayAddress);
+		if (i2cHandle == -1) {
+			cerr << "ClubUpdater: error starting i2c relay device." << endl;
+			return;
+		}
+	
+		// Configure the GPIO expander.
+		// Register is 0x06, the pin direction configuration register.
+		// FIXME: Skip this step is the club is already open? i2c device should be configured.
+		wiringPiI2CWriteReg8(i2cHandle, REG_CONF_PORT0, 0x00);		// All pins as output.
+		wiringPiI2CWriteReg8(i2cHandle, REG_OUTPUT_PORT0, 0x00);	// All pins low.
+		
+		cout << "ClubUpdater: Finished configuring the i2c relay device's registers." << endl;
+	}
+	
+	// Perform initial update for club status.
+	updateStatus();
+	
+	cout << "ClubUpdater: Initial status update complete." << endl;
+	
+	cout << "ClubUpdater: Entering waiting condition." << endl;
+	
+	// Start waiting using the condition variable until signalled by one of the interrupts.	
+	while (Club::running) {
+		Club::clubCndMutex.lock();
+		if (!Club::clubCnd.tryWait(Club::clubCndMutex, 60 * 1000)) { // Wait for a minute.
+			if (!Club::clubChanged) { continue; } // Timed out, still no change. Wait again.
+		}
+		
+		updateStatus();
+	}
+	
+	delete timer;
+	delete cb;
+}
+
+
+// --- UPDATE STATUS ---
+void ClubUpdater::updateStatus() {
+	// Adjust the club status using the values that got updated by the interrupt handler(s).
+	Club::clubChanged = false;
+	
+	// Check whether we are opening or closing the club.
+	if (Club::clubIsClosed && !Club::clubOff) {
+		Club::clubIsClosed = false;
+		
+		cout << "ClubUpdater: Opening club." << endl;
+		
+		// Power has to be on. Write to relay with a 10 second delay.
+		Club::powerOn = true;
+		
+		timerMutex.lock();
+		timer = new Timer(10 * 1000, 0); // 10 second start interval.
+		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+		timer->start(*cb);
+		
+		cout << "ClubUpdater: Started power timer..." << endl;
+		
+		// Send MQTT notification. Payload is '1' (true) as ASCII.
+		char msg = { '1' };
+		Club::mqtt->sendMessage(Club::mqttTopic, &msg, 1);
+		
+		cout << "ClubUpdater: Sent MQTT message." << endl;
+	}
+	else if (!Club::clubIsClosed && Club::clubOff) {
+		Club::clubIsClosed = true;
+		
+		cout << "ClubUpdater: Closing club." << endl;
+		
+		// Power has to be off. Write to relay with a 10 second delay.
+		Club::powerOn = false;
+		
+		timerMutex.lock();
+		timer = new Timer(10 * 1000, 0); // 10 second start interval.
+		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+		timer->start(*cb);
+		
+		cout << "ClubUpdater: Started power timer..." << endl;
+		
+		// Send MQTT notification. Payload is '0' (false) as ASCII.
+		char msg = { '0' };
+		Club::mqtt->sendMessage(Club::mqttTopic, &msg, 1);
+		
+		cout << "ClubUpdater: Sent MQTT message." << endl;
+	}
+	
+	// Set the new colours on the traffic light.
+	if (Club::clubOff) {
+		cout << "ClubUpdater: New lights, clubstatus off." << endl;
+		
+		mutex.lock();
+		regOut0 = 0;
+		if (Club::clubLocked) {
+			// Light: Red.
+			cout << "ClubUpdater: Red on." << endl;
+			regOut0 |= (1UL << RELAY_RED); 
+		} 
+		else {
+			// Light: Yellow.
+			cout << "ClubUpdater: Yellow on." << endl;
+			regOut0 |= (1UL << RELAY_YELLOW);
+		} 
+		
+		cout << "ClubUpdater: Changing output register to: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+		
+		writeRelayOutputs();
+		mutex.unlock();
+	}
+	else { // Club on.
+		cout << "ClubUpdater: New lights, clubstatus on." << endl;
+		
+		mutex.lock();
+		regOut0 = 1;
+		
+		if (Club::clubLocked) {
+			// Light: Yellow and Red.
+			cout << "ClubUpdater: Yellow & Red on." << endl;
+			regOut0 |= (1UL << RELAY_YELLOW);
+			regOut0 |= (1UL << RELAY_RED);
+		}
+		else {
+			// Light: Green.
+			cout << "ClubUpdater: Green on." << endl;
+			regOut0 |= (1UL << RELAY_GREEN);
+		}
+		
+		cout << "ClubUpdater: Changing output register to: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+		
+		writeRelayOutputs();
+		mutex.unlock();
+	}
+}
+
+
+// --- WRITE RELAY OUTPUTS ---
+void ClubUpdater::writeRelayOutputs() {
+	// Write the current state of the locally saved output 0 register contents to the device.
+	wiringPiI2CWriteReg8(i2cHandle, REG_OUTPUT_PORT0, regOut0);
+	
+	cout << "ClubUpdater: Finished writing relay outputs with: 0x" 
+			<< NumberFormatter::formatHex(regOut0) << endl;
+}
+
+
+// --- SET POWER STATE ---
+void ClubUpdater::setPowerState(Timer &t) {
+	cout << "ClubUpdater: setPowerState called." << endl;
+	
+	// Update register with current power state, then update remote device.
+	mutex.lock();
+	if (Club::powerOn) { regOut0 |= (1UL << RELAY_POWER); }
+	else { regOut0 &= ~(1UL << RELAY_POWER); }
+	
+	cout << "ClubUpdater: Writing relay with: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+	
+	writeRelayOutputs();
+	mutex.unlock();
+	
+	delete timer;
+	delete cb;
+	timerMutex.unlock();
+}
+
+
+// === CLUB ===
+// --- START ---
+bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
+	cout << "Club: starting up..." << endl;
+	// Defaults.
+	relayActive = relayactive;
+	relayAddress = relayaddress;
+	mqttTopic　= topic;
+	
+	// Start the WiringPi framework.
+	// We assume that this service is running inside the 'gpio' group.
+	// Since we use this setup method we are expected to use WiringPi pin numbers.
+	wiringPiSetup();
+	
+	cout << "Club: Finished wiringPi setup." << endl;
+	
+	// Configure and read current GPIO inputs.
+	// Lock: 	BCM GPIO 17 (pin 11, GPIO 0)
+	// Status: 	BCM GPIO 4 (pin 7, GPIO 7)
+	pinMode(0, INPUT);
+	pinMode(7, INPUT);
+	clubLocked = digitalRead(0);
+	clubOff = !digitalRead(7);
+	
+	cout << "Club: Finished configuring pins." << endl;
+	
+	// Register GPIO interrupts for the lock and club status switches.
+	wiringPiISR(0, INT_EDGE_BOTH, &lockISRCallback);
+	wiringPiISR(7, INT_EDGE_BOTH, &statusISRCallback);
+	
+	cout << "Club: Configured interrupts." << endl;
+	
+	// Start update thread.
+	running = true;
+	updateThread.start(updater);
+	
+	cout << "Club: Started update thread." << endl;
+	
+	return true;
+}
+
+
+// --- STOP ---
+void Club::stop() {
+	running = false;
+	
+	// unregister the GPIO interrupts.
+	// TODO: research whether clean-up is needed with a restart instead of an application shutdown.
+	
+	// Stop the i2c bus.
+	// FIXME: no method found in WiringPi library. Unneeded?
+}
+
+
+// --- LOCK ISR CALLBACK ---
+void Club::lockISRCallback() {
+	// Update the current lock GPIO value.
+	clubLocked = digitalRead(0);
+	
+	// Trigger condition variable.
+	clubChanged = true;
+	clubCnd.signal();
+}
+
+
+// --- STATUS ISR CALLBACK ---
+void Club::statusISRCallback() {
+	// Update the current status GPIO value.
+	clubOff = !digitalRead(7);
+	
+	// Trigger condition variable.
+	clubChanged = true;
+	clubCnd.signal();
+}
