@@ -20,6 +20,20 @@ At Entropia we use the above linked relay board, with four relays (channel 1-4).
 3. Yellow light (Club partially closed; one switch still 'on').
 4. Red light (Club closed; both switches 'off').
 
+## GPIO switches ##
+
+The project is hard-wired to expect the following two switches on its GPIO pins:
+
+* BCM GPIO 17 (#11, WiringPi 0) => Door lock switch.
+* BCM GPIO 4 (#7, WiringPi 7)   => Club status switch.
+
+The door lock switch in combination with the status switch produces the following truth table:
+
+* Status `HIGH`, Lock `LOW` &nbsp;=> Power `ON`, &nbsp; Light `GREEN`.
+* Status `LOW`, &nbsp; Lock `LOW` &nbsp;=> Power `OFF`, Light `YELLOW`.
+* Status `LOW`, &nbsp; Lock `HIGH` => Power `OFF`, Light `RED`.
+* Status `HIGH`, Lock `HIGH` => Power `ON`, &nbsp; Light `YELLOW` + `RED`.
+
 ## Building ##
 
 This service is meant to be run on a Raspberry Pi SBC (Single Board Computer). It is easiest to compile this project on there as well, which is why the following instructions assume that one is building on a variety of Raspberry Pi.

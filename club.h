@@ -48,6 +48,7 @@ class ClubUpdater : public Runnable {
 	Timer* timer;
 	Mutex mutex;
 	Mutex timerMutex;
+	bool powerTimerActive;
 	
 public:
 	void run();

@@ -80,6 +80,7 @@ void ClubUpdater::run() {
 	regDir0 = 0x00;
 	regOut0 = 0x00;
 	Club::powerOn = false;
+	powerTimerActive = false;
 	
 	if (Club::relayActive) {
 		// First pulse the i2c's SCL a few times in order to unlock any frozen devices.
@@ -119,9 +120,6 @@ void ClubUpdater::run() {
 		
 		updateStatus();
 	}
-	
-	delete timer;
-	delete cb;
 }
 
 
@@ -143,6 +141,7 @@ void ClubUpdater::updateStatus() {
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
 		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
+		powerTimerActive = true;
 		
 		cout << "ClubUpdater: Started power timer..." << endl;
 		
@@ -164,6 +163,7 @@ void ClubUpdater::updateStatus() {
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
 		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
+		powerTimerActive = true;
 		
 		cout << "ClubUpdater: Started power timer..." << endl;
 		
@@ -179,7 +179,13 @@ void ClubUpdater::updateStatus() {
 		cout << "ClubUpdater: New lights, clubstatus off." << endl;
 		
 		mutex.lock();
-		regOut0 = 0;
+		if (powerTimerActive) {
+			regOut0 = !Club::powerOn; // Take the inverse of what the timer callback will set.
+		}
+		else {
+			regOut0 = Club::powerOn; // Use the current power state value.
+		}
+		
 		if (Club::clubLocked) {
 			// Light: Red.
 			cout << "ClubUpdater: Red on." << endl;
@@ -200,7 +206,12 @@ void ClubUpdater::updateStatus() {
 		cout << "ClubUpdater: New lights, clubstatus on." << endl;
 		
 		mutex.lock();
-		regOut0 = 1;
+		if (powerTimerActive) {
+			regOut0 = !Club::powerOn; // Take the inverse of what the timer callback will set.
+		}
+		else {
+			regOut0 = Club::powerOn; // Use the current power state value.
+		}
 		
 		if (Club::clubLocked) {
 			// Light: Yellow and Red.
@@ -248,6 +259,7 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	delete timer;
 	delete cb;
+	powerTimerActive = false;
 	timerMutex.unlock();
 }
 
@@ -259,7 +271,7 @@ bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
 	// Defaults.
 	relayActive = relayactive;
 	relayAddress = relayaddress;
-	mqttTopic　= topic;
+	mqttTopic = topic;
 	
 	// Start the WiringPi framework.
 	// We assume that this service is running inside the 'gpio' group.
