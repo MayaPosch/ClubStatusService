@@ -50,6 +50,9 @@ This service is meant to be run on a Raspberry Pi SBC (Single Board Computer). I
 * WiringPi
 
 
+Command line: `sudo apt install libpoco-dev libmosquittopp-dev wiringpi`
+
+
 After ensuring that all dependencies are installed on the Raspberry Pi system, one can compile the project by executing `make` in the project folder. This will create the binary (`clubstatus`).
 
 ## Configuring ##
