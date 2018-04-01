@@ -37,7 +37,7 @@ public:
 	void on_message(const struct mosquitto_message* message);
 	void on_subscribe(int mid, int qos_count, const int* granted_qos);
 	
-	void sendMessage(string& topic, string& message);
+	void sendMessage(string topic, string& message);
 	void sendMessage(string& topic, char* message, int msgLength);
 };
 

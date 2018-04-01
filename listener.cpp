@@ -85,7 +85,7 @@ void Listener::on_subscribe(int mid, int qos_count, const int* granted_qos) {
 
 
 // --- SEND MESSAGE ---
-void Listener::sendMessage(string &topic, string &message) {
+void Listener::sendMessage(string topic, string &message) {
 	cout << "Listener: Sending MQTT message with length " << message.length() 
 			<< " on topic: " << topic << endl;
 	cout << "Listener: Topic " << topic << ", message: 0x" << NumberFormatter::formatHex(*(uint8_t*)  message.data()) 

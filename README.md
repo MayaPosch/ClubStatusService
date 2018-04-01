@@ -10,6 +10,7 @@ It is currently in use at Entropia as the club status service, setting club stat
 * HTTP server with REST API for viewing the club status.
 * MQTT client for status updates.
 * Support for PCAL9535A-based i2c relay boards (e.g.: [http://wiki.seeedstudio.com/Raspberry_Pi_Relay_Board_v1.0/](http://wiki.seeedstudio.com/Raspberry_Pi_Relay_Board_v1.0/ "Raspberry Pi Relay Board v1.0"))
+* Logging over MQTT.
 
 ## Relay ##
 
@@ -70,6 +71,20 @@ A sample Systemd service file is provided with the project. One can update the p
 When the service is running, one can navigate to the configured HTTP address with a browser and get a self-updating status page with the current status of the club.
 
 One can also obtain the status via MQTT, by publishing on `/club/status`, which will get a response on `/club/status/response`. (Not yet implemented).
+
+## Logging ##
+
+In addition the logging services provided by running the application as a Systemd service, logging is also provided over MQTT for a subset of messages. The MQTT topics for this are:
+
+* `/log/fatal`
+* `/log/error`
+* `/log/warning`
+* `/log/info`
+* `/log/debug`
+
+The payload contains a string with the format:
+
+`ClubStatus <log level>: <message>`
 
 ## Notes ##
 

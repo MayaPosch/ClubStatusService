@@ -37,6 +37,15 @@ using namespace std;
 #include <wiringPiI2C.h>
 
 
+enum Log_level {
+	LOG_FATAL = 1,
+	LOG_ERROR = 2,
+	LOG_WARNING = 3,
+	LOG_INFO = 4,
+	LOG_DEBUG = 5
+};
+
+
 class Listener;
 
 
@@ -84,6 +93,7 @@ public:
 	static void stop();
 	static void togglePower();
 	static void setRelay();
+	static void log(Log_level level, string msg);
 };
 
 #endif

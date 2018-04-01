@@ -91,7 +91,7 @@ void ClubUpdater::run() {
 		cout << "ClubUpdater: Starting i2c relay device." << endl;
 		i2cHandle = wiringPiI2CSetup(Club::relayAddress);
 		if (i2cHandle == -1) {
-			cerr << "ClubUpdater: error starting i2c relay device." << endl;
+			Club::log(LOG_FATAL, string("ClubUpdater: error starting i2c relay device."));
 			return;
 		}
 	
@@ -132,7 +132,7 @@ void ClubUpdater::updateStatus() {
 	if (Club::clubIsClosed && !Club::clubOff) {
 		Club::clubIsClosed = false;
 		
-		cout << "ClubUpdater: Opening club." << endl;
+		Club::log(LOG_INFO, string("ClubUpdater: Opening club."));
 		
 		// Power has to be on. Write to relay with a 10 second delay.
 		Club::powerOn = true;
@@ -154,7 +154,7 @@ void ClubUpdater::updateStatus() {
 	else if (!Club::clubIsClosed && Club::clubOff) {
 		Club::clubIsClosed = true;
 		
-		cout << "ClubUpdater: Closing club." << endl;
+		Club::log(LOG_INFO, string("ClubUpdater: Closing club."));
 		
 		// Power has to be off. Write to relay with a 10 second delay.
 		Club::powerOn = false;
@@ -176,7 +176,7 @@ void ClubUpdater::updateStatus() {
 	
 	// Set the new colours on the traffic light.
 	if (Club::clubOff) {
-		cout << "ClubUpdater: New lights, clubstatus off." << endl;
+		Club::log(LOG_INFO, string("ClubUpdater: New lights, clubstatus off."));
 		
 		mutex.lock();
 		if (powerTimerActive) {
@@ -188,12 +188,12 @@ void ClubUpdater::updateStatus() {
 		
 		if (Club::clubLocked) {
 			// Light: Red.
-			cout << "ClubUpdater: Red on." << endl;
+			Club::log(LOG_INFO, string("ClubUpdater: Red on."));
 			regOut0 |= (1UL << RELAY_RED); 
 		} 
 		else {
 			// Light: Yellow.
-			cout << "ClubUpdater: Yellow on." << endl;
+			Club::log(LOG_INFO, string("ClubUpdater: Yellow on."));
 			regOut0 |= (1UL << RELAY_YELLOW);
 		} 
 		
@@ -203,7 +203,7 @@ void ClubUpdater::updateStatus() {
 		mutex.unlock();
 	}
 	else { // Club on.
-		cout << "ClubUpdater: New lights, clubstatus on." << endl;
+		Club::log(LOG_INFO, string("ClubUpdater: New lights, clubstatus on."));
 		
 		mutex.lock();
 		if (powerTimerActive) {
@@ -215,13 +215,13 @@ void ClubUpdater::updateStatus() {
 		
 		if (Club::clubLocked) {
 			// Light: Yellow and Red.
-			cout << "ClubUpdater: Yellow & Red on." << endl;
+			Club::log(LOG_INFO, string("ClubUpdater: Yellow & Red on."));
 			regOut0 |= (1UL << RELAY_YELLOW);
 			regOut0 |= (1UL << RELAY_RED);
 		}
 		else {
 			// Light: Green.
-			cout << "ClubUpdater: Green on." << endl;
+			Club::log(LOG_INFO, string("ClubUpdater: Green on."));
 			regOut0 |= (1UL << RELAY_GREEN);
 		}
 		
@@ -245,7 +245,7 @@ void ClubUpdater::writeRelayOutputs() {
 
 // --- SET POWER STATE ---
 void ClubUpdater::setPowerState(Timer &t) {
-	cout << "ClubUpdater: setPowerState called." << endl;
+	Club::log(LOG_INFO, string("ClubUpdater: setPowerState called."));
 	
 	// Update register with current power state, then update remote device.
 	mutex.lock();
@@ -337,4 +337,44 @@ void Club::statusISRCallback() {
 	// Trigger condition variable.
 	clubChanged = true;
 	clubCnd.signal();
+}
+
+
+// --- LOG ---
+void Club::log(Log_level level, string msg) {
+	switch (level) {
+		case LOG_FATAL: {
+			cerr << "FATAL: " << msg << endl;
+			string message = string("ClubStatus FATAL: ") + msg;
+			mqtt->sendMessage("/log/fatal", message);
+			break;
+		}
+		case LOG_ERROR: {
+			cerr << "ERROR: " << msg << endl;
+			string message = string("ClubStatus ERROR: ") + msg;
+			mqtt->sendMessage("/log/error", message);
+			break;
+		}
+		case LOG_WARNING: {
+			cerr << "WARNING: " << msg << endl;
+			string message = string("ClubStatus WARNING: ") + msg;
+			mqtt->sendMessage("/log/warning", message);
+			break;
+		}
+		case LOG_INFO: {
+			cout << "INFO: " << msg << endl;
+			string message = string("ClubStatus INFO: ") + msg;
+			mqtt->sendMessage("/log/info", message);
+			break;
+		}
+		case LOG_DEBUG: {
+			cout << "DEBUG: " << msg << endl;
+			string message = string("ClubStatus DEBUG: ") + msg;
+			mqtt->sendMessage("/log/debug", message);
+			break;
+		}
+		default:
+			// Shouldn't get here.
+			break;
+	}
 }
