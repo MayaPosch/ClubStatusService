@@ -2,7 +2,9 @@
 Description=ClubStatus monitoring & control
 
 [Service]
-ExecStart= /home/user/clubstatus/clubstatus /home/user/clubstatus/config.ini
+ExecStart=/home/user/clubstatus/clubstatus /home/user/clubstatus/config.ini
+User=user
+WorkingDirectory=/home/user/clubstatus
 Restart=always
 RestartSec=5
 
