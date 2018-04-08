@@ -71,6 +71,9 @@ Mutex Club::clubCndMutex;
 bool Club::clubChanged = false;
 bool Club::running = false;
 bool Club::clubIsClosed = true;
+bool Club::firstRun = true;
+bool Club::lockChanged = false;
+bool Club::statusChanged = false;
 
 
 // === CLUB UPDATER ===
@@ -127,6 +130,25 @@ void ClubUpdater::run() {
 void ClubUpdater::updateStatus() {
 	// Adjust the club status using the values that got updated by the interrupt handler(s).
 	Club::clubChanged = false;
+	
+	if (Club::lockChanged) {
+		string state = (Club::clubLocked) ? "locked" : "unlocked";
+		Club::log(LOG_INFO, string("ClubUpdater: lock status changed to ") + state);
+		Club::lockChanged = false;
+	}
+	else if (Club::statusChanged) {		
+		string state = (Club::clubOff) ? "off" : "on";
+		Club::log(LOG_INFO, string("ClubUpdater: status switch status changed to ") + state);
+		Club::statusChanged = false;
+	}
+	else if (Club::firstRun) {
+		Club::log(LOG_INFO, string("ClubUpdater: starting initial update run."));
+		Club::firstRun = false;
+	}
+	else {
+		Club::log(LOG_ERROR, string("ClubUpdater: update triggered, but no change detected. Aborting."));
+		return;
+	}
 	
 	// Check whether we are opening or closing the club.
 	if (Club::clubIsClosed && !Club::clubOff) {
@@ -285,6 +307,8 @@ bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
 	// Status: 	BCM GPIO 4 (pin 7, GPIO 7)
 	pinMode(0, INPUT);
 	pinMode(7, INPUT);
+	pullUpDnControl(0, PUD_DOWN);
+	pullUpDnControl(7, PUD_DOWN);
 	clubLocked = digitalRead(0);
 	clubOff = !digitalRead(7);
 	
@@ -322,6 +346,7 @@ void Club::stop() {
 void Club::lockISRCallback() {
 	// Update the current lock GPIO value.
 	clubLocked = digitalRead(0);
+	lockChanged = true;
 	
 	// Trigger condition variable.
 	clubChanged = true;
@@ -333,6 +358,7 @@ void Club::lockISRCallback() {
 void Club::statusISRCallback() {
 	// Update the current status GPIO value.
 	clubOff = !digitalRead(7);
+	statusChanged = true;
 	
 	// Trigger condition variable.
 	clubChanged = true;

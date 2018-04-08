@@ -88,6 +88,9 @@ public:
 	static bool clubChanged ;
 	static bool running;
 	static bool clubIsClosed;
+	static bool firstRun;
+	static bool lockChanged;
+	static bool statusChanged;
 	
 	static bool start(bool relayactive, uint8_t relayaddress, string topic);
 	static void stop();
