@@ -91,6 +91,8 @@ public:
 	static bool firstRun;
 	static bool lockChanged;
 	static bool statusChanged;
+	static bool previousLockValue;
+	static bool previousStatusValue;
 	
 	static bool start(bool relayactive, uint8_t relayaddress, string topic);
 	static void stop();

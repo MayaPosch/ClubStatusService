@@ -74,6 +74,8 @@ bool Club::clubIsClosed = true;
 bool Club::firstRun = true;
 bool Club::lockChanged = false;
 bool Club::statusChanged = false;
+bool Club::previousLockValue = false;
+bool Club::previousStatusValue = false;
 
 
 // === CLUB UPDATER ===
@@ -135,11 +137,25 @@ void ClubUpdater::updateStatus() {
 		string state = (Club::clubLocked) ? "locked" : "unlocked";
 		Club::log(LOG_INFO, string("ClubUpdater: lock status changed to ") + state);
 		Club::lockChanged = false;
+		
+		if (Club::clubLocked == Club::previousLockValue) {
+			Club::log(LOG_WARNING, string("ClubUpdater: lock interrupt triggered, but value hasn't changed. Aborting."));
+			return;
+		}
+		
+		Club::previousLockValue = Club::clubLocked;
 	}
 	else if (Club::statusChanged) {		
 		string state = (Club::clubOff) ? "off" : "on";
 		Club::log(LOG_INFO, string("ClubUpdater: status switch status changed to ") + state);
 		Club::statusChanged = false;
+		
+		if (Club::clubOff == Club::previousStatusValue) {
+			Club::log(LOG_WARNING, string("ClubUpdater: status interrupt triggered, but value hasn't changed. Aborting."));
+			return;
+		}
+		
+		Club::previousStatusValue = Club::clubOff;
 	}
 	else if (Club::firstRun) {
 		Club::log(LOG_INFO, string("ClubUpdater: starting initial update run."));
