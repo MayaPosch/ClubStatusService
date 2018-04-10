@@ -217,10 +217,13 @@ void ClubUpdater::updateStatus() {
 		Club::log(LOG_INFO, string("ClubUpdater: New lights, clubstatus off."));
 		
 		mutex.lock();
+		string state = (Club::powerOn) ? "on" : "off";
 		if (powerTimerActive) {
+			Club::log(LOG_DEBUG, string("ClubUpdater: Power timer active, inverting power state from: ") + state);
 			regOut0 = !Club::powerOn; // Take the inverse of what the timer callback will set.
 		}
 		else {
+			Club::log(LOG_DEBUG, string("ClubUpdater: Power timer not active, using current power state: ") + state);
 			regOut0 = Club::powerOn; // Use the current power state value.
 		}
 		
@@ -244,10 +247,13 @@ void ClubUpdater::updateStatus() {
 		Club::log(LOG_INFO, string("ClubUpdater: New lights, clubstatus on."));
 		
 		mutex.lock();
+		string state = (Club::powerOn) ? "on" : "off";
 		if (powerTimerActive) {
+			Club::log(LOG_DEBUG, string("ClubUpdater: Power timer active, inverting power state from: ") + state);
 			regOut0 = !Club::powerOn; // Take the inverse of what the timer callback will set.
 		}
 		else {
+			Club::log(LOG_DEBUG, string("ClubUpdater: Power timer not active, using current power state: ") + state);
 			regOut0 = Club::powerOn; // Use the current power state value.
 		}
 		
@@ -287,6 +293,7 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	// Update register with current power state, then update remote device.
 	mutex.lock();
+	powerTimerActive = false;
 	if (Club::powerOn) { regOut0 |= (1UL << RELAY_POWER); }
 	else { regOut0 &= ~(1UL << RELAY_POWER); }
 	
@@ -297,7 +304,6 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	delete timer;
 	delete cb;
-	powerTimerActive = false;
 	timerMutex.unlock();
 }
 
