@@ -18,9 +18,9 @@
 
 #include <fstream>
 #include <memory>
+#include <iostream>
 
 
-// Types
 WiringTimer::WiringTimer() {
 	// Defaults.
 	triggerCnt = 0;
@@ -140,23 +140,25 @@ void pullUpDnControl(int pin, int pud) {
  
 int digitalRead(int pin) {
 	// Return the current value for the virtual pin.	
-	// TODO: Open the respective pin's file and read out its value (first character).
+	// Open the respective pin's file and read out its value (first character).
 	// Return either a 0 or 1.
 	if (pin == 0) {
-		char val;
 		std::ifstream PIN0VAL;
 		PIN0VAL.open("pin0val", std::ios_base::binary);
-		PIN0VAL.get(val);
+		int val = PIN0VAL.get();
 		PIN0VAL.close();
+		
+		std::cout << "TEST: Reading pin 0: " << val << std::endl;
 		
 		return val;
 	}
 	else if (pin == 7) {
-		char val;
 		std::ifstream PIN7VAL;
 		PIN7VAL.open("pin7val", std::ios_base::binary);
-		PIN7VAL.get(val);
+		int val = PIN7VAL.get();
 		PIN7VAL.close();
+		
+		std::cout << "TEST: Reading pin 7: " << val << std::endl;
 		
 		return val;
 	}

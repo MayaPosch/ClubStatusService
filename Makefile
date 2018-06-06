@@ -4,7 +4,7 @@ TARGET = clubstatus
 SOURCES := $(wildcard *.cpp)
 
 ifdef TEST
-LDFLAGS := $(LDFLAGS) -lmosquittopp -lmosquitto -lPocoNet -lPocoNetSSL -lPocoUtil -lPocoData -lPocoSQLite -lPocoFoundation
+LDFLAGS := $(LDFLAGS) -lmosquittopp -lmosquitto -lPocoNet -lPocoNetSSL -lPocoUtil -lPocoData -lPocoDataSQLite -lPocoFoundation
 INCLUDES := -Iwiring
 SOURCES += $(wildcard wiring/*.cpp)
 else

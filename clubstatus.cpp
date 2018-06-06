@@ -1,5 +1,5 @@
 /*
-	clubstatus.cpp - Clubstatus service for Entropia.
+	clubstatus.cpp - Clubstatus service for monitoring a club room.
 	
 	Revision 0
 	

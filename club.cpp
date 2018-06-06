@@ -334,6 +334,9 @@ bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
 	clubLocked = digitalRead(0);
 	clubOff = !digitalRead(7);
 	
+	previousLockValue = clubLocked;
+	previousStatusValue = clubOff;
+	
 	cout << "Club: Finished configuring pins." << endl;
 	
 	// Register GPIO interrupts for the lock and club status switches.
