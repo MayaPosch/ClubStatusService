@@ -86,6 +86,7 @@ void ClubUpdater::run() {
 	regOut0 = 0x00;
 	Club::powerOn = false;
 	powerTimerActive = false;
+	cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 	
 	if (Club::relayActive) {
 		// First pulse the i2c's SCL a few times in order to unlock any frozen devices.
@@ -177,7 +178,7 @@ void ClubUpdater::updateStatus() {
 		
 		timerMutex.lock();
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+		//cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
 		powerTimerActive = true;
 		
@@ -199,7 +200,7 @@ void ClubUpdater::updateStatus() {
 		
 		timerMutex.lock();
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+		//cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
 		powerTimerActive = true;
 		
@@ -303,7 +304,7 @@ void ClubUpdater::setPowerState(Timer &t) {
 	mutex.unlock();
 	
 	delete timer;
-	delete cb;
+	//delete cb;
 	timerMutex.unlock();
 }
 
