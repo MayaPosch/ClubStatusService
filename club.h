@@ -57,6 +57,7 @@ class ClubUpdater : public Runnable {
 	Timer* timer;
 	Mutex mutex;
 	Mutex timerMutex;
+	Condition timerCnd;
 	bool powerTimerActive;
 	
 public:
@@ -85,6 +86,7 @@ public:
 	
 	static Condition clubCnd;
 	static Mutex clubCndMutex;
+	static Mutex logMutex;
 	static bool clubChanged ;
 	static bool running;
 	static bool clubIsClosed;

@@ -68,6 +68,7 @@ Listener* Club::mqtt;
 
 Condition Club::clubCnd;
 Mutex Club::clubCndMutex;
+Mutex Club::logMutex;
 bool Club::clubChanged = false;
 bool Club::running = false;
 bool Club::clubIsClosed = true;
@@ -76,6 +77,20 @@ bool Club::lockChanged = false;
 bool Club::statusChanged = false;
 bool Club::previousLockValue = false;
 bool Club::previousStatusValue = false;
+
+
+// === POWER TIMER ===
+// --- CONSTRUCTOR ---
+/* PowerTimer::PowerTimer() {
+	// Setup.
+	cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+}
+
+
+// --- ADD TIMER ---
+void PowerTimer::addTimer() {
+	// Increase the 
+} */
 
 
 // === CLUB UPDATER ===
@@ -94,7 +109,7 @@ void ClubUpdater::run() {
 	
 		// Start the i2c bus and check for presence of the relay board.
 		// i2c address: 0x20.
-		cout << "ClubUpdater: Starting i2c relay device." << endl;
+		Club::log(LOG_INFO, "ClubUpdater: Starting i2c relay device.");
 		i2cHandle = wiringPiI2CSetup(Club::relayAddress);
 		if (i2cHandle == -1) {
 			Club::log(LOG_FATAL, string("ClubUpdater: error starting i2c relay device."));
@@ -107,21 +122,24 @@ void ClubUpdater::run() {
 		wiringPiI2CWriteReg8(i2cHandle, REG_CONF_PORT0, 0x00);		// All pins as output.
 		wiringPiI2CWriteReg8(i2cHandle, REG_OUTPUT_PORT0, 0x00);	// All pins low.
 		
-		cout << "ClubUpdater: Finished configuring the i2c relay device's registers." << endl;
+		Club::log(LOG_INFO, "ClubUpdater: Finished configuring the i2c relay device's registers.");
 	}
 	
 	// Perform initial update for club status.
 	updateStatus();
 	
-	cout << "ClubUpdater: Initial status update complete." << endl;
-	
-	cout << "ClubUpdater: Entering waiting condition." << endl;
+	Club::log(LOG_INFO, "ClubUpdater: Initial status update complete.");
+	Club::log(LOG_INFO, "ClubUpdater: Entering waiting condition.");
 	
 	// Start waiting using the condition variable until signalled by one of the interrupts.	
 	while (Club::running) {
 		Club::clubCndMutex.lock();
 		if (!Club::clubCnd.tryWait(Club::clubCndMutex, 60 * 1000)) { // Wait for a minute.
+			Club::clubCndMutex.unlock();
 			if (!Club::clubChanged) { continue; } // Timed out, still no change. Wait again.
+		}
+		else {
+			Club::clubCndMutex.unlock();
 		}
 		
 		updateStatus();
@@ -176,19 +194,32 @@ void ClubUpdater::updateStatus() {
 		// Power has to be on. Write to relay with a 10 second delay.
 		Club::powerOn = true;
 		
-		timerMutex.lock();
+		// Wait on condition variable if another timer is active.
+		/* if (powerTimerActive) {
+			timerMutex.lock();
+			if (!timerCnd.tryWait(timerMutex, 30 * 1000)) {
+				// Time-out, cancel this timer.
+				timerMutex.unlock();
+				Club::log(LOG_ERROR, "ClubUpdater: 30s time-out on new power timer. Cancelling...");
+				return;
+			}
+			
+			timerMutex.unlock();
+		} */
+		
+		while (powerTimerActive) { Thread::sleep(500); }
+		
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		//cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
 		powerTimerActive = true;
 		
-		cout << "ClubUpdater: Started power timer..." << endl;
+		Club::log(LOG_INFO, "ClubUpdater: Started power timer...");
 		
 		// Send MQTT notification. Payload is '1' (true) as ASCII.
 		char msg = { '1' };
 		Club::mqtt->sendMessage(Club::mqttTopic, &msg, 1);
 		
-		cout << "ClubUpdater: Sent MQTT message." << endl;
+		Club::log(LOG_DEBUG, "ClubUpdater: Sent MQTT message.");
 	}
 	else if (!Club::clubIsClosed && Club::clubOff) {
 		Club::clubIsClosed = true;
@@ -198,19 +229,32 @@ void ClubUpdater::updateStatus() {
 		// Power has to be off. Write to relay with a 10 second delay.
 		Club::powerOn = false;
 		
-		timerMutex.lock();
+		// Wait on condition variable if another timer is active.
+		/* if (powerTimerActive) {
+			timerMutex.lock();
+			if (!timerCnd.tryWait(timerMutex, 30 * 1000)) {
+				// Time-out, cancel this timer.
+				timerMutex.unlock();
+				Club::log(LOG_ERROR, "ClubUpdater: 30s time-out on new power timer. Cancelling...");
+				return;
+			}
+		
+			timerMutex.unlock();
+		} */
+		
+		while (powerTimerActive) { Thread::sleep(500); }
+		
 		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		//cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
 		timer->start(*cb);
 		powerTimerActive = true;
 		
-		cout << "ClubUpdater: Started power timer..." << endl;
+		Club::log(LOG_INFO, "ClubUpdater: Started power timer...");
 		
 		// Send MQTT notification. Payload is '0' (false) as ASCII.
 		char msg = { '0' };
 		Club::mqtt->sendMessage(Club::mqttTopic, &msg, 1);
 		
-		cout << "ClubUpdater: Sent MQTT message." << endl;
+		Club::log(LOG_DEBUG, "ClubUpdater: Sent MQTT message.");
 	}
 	
 	// Set the new colours on the traffic light.
@@ -239,7 +283,7 @@ void ClubUpdater::updateStatus() {
 			regOut0 |= (1UL << RELAY_YELLOW);
 		} 
 		
-		cout << "ClubUpdater: Changing output register to: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+		Club::log(LOG_DEBUG, "ClubUpdater: Changing output register to: 0x" + NumberFormatter::formatHex(regOut0));
 		
 		writeRelayOutputs();
 		mutex.unlock();
@@ -270,7 +314,7 @@ void ClubUpdater::updateStatus() {
 			regOut0 |= (1UL << RELAY_GREEN);
 		}
 		
-		cout << "ClubUpdater: Changing output register to: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+		Club::log(LOG_DEBUG, "ClubUpdater: Changing output register to: 0x" + NumberFormatter::formatHex(regOut0));
 		
 		writeRelayOutputs();
 		mutex.unlock();
@@ -283,8 +327,8 @@ void ClubUpdater::writeRelayOutputs() {
 	// Write the current state of the locally saved output 0 register contents to the device.
 	wiringPiI2CWriteReg8(i2cHandle, REG_OUTPUT_PORT0, regOut0);
 	
-	cout << "ClubUpdater: Finished writing relay outputs with: 0x" 
-			<< NumberFormatter::formatHex(regOut0) << endl;
+	Club::log(LOG_DEBUG, "ClubUpdater: Finished writing relay outputs with: 0x" 
+			+ NumberFormatter::formatHex(regOut0));
 }
 
 
@@ -294,25 +338,25 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	// Update register with current power state, then update remote device.
 	mutex.lock();
-	powerTimerActive = false;
 	if (Club::powerOn) { regOut0 |= (1UL << RELAY_POWER); }
 	else { regOut0 &= ~(1UL << RELAY_POWER); }
 	
-	cout << "ClubUpdater: Writing relay with: 0x" << NumberFormatter::formatHex(regOut0) << endl;
+	Club::log(LOG_DEBUG, "ClubUpdater: Writing relay with: 0x" + NumberFormatter::formatHex(regOut0));
 	
 	writeRelayOutputs();
+	
+	powerTimerActive = false;
 	mutex.unlock();
 	
 	delete timer;
-	//delete cb;
-	timerMutex.unlock();
+	//timerCnd.signal();
 }
 
 
 // === CLUB ===
 // --- START ---
 bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
-	cout << "Club: starting up..." << endl;
+	Club::log(LOG_INFO, "Club: starting up...");
 	// Defaults.
 	relayActive = relayactive;
 	relayAddress = relayaddress;
@@ -323,7 +367,7 @@ bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
 	// Since we use this setup method we are expected to use WiringPi pin numbers.
 	wiringPiSetup();
 	
-	cout << "Club: Finished wiringPi setup." << endl;
+	Club::log(LOG_INFO,  "Club: Finished wiringPi setup.");
 	
 	// Configure and read current GPIO inputs.
 	// Lock: 	BCM GPIO 17 (pin 11, GPIO 0)
@@ -338,19 +382,19 @@ bool Club::start(bool relayactive, uint8_t relayaddress, string topic) {
 	previousLockValue = clubLocked;
 	previousStatusValue = clubOff;
 	
-	cout << "Club: Finished configuring pins." << endl;
+	Club::log(LOG_INFO, "Club: Finished configuring pins.");
 	
 	// Register GPIO interrupts for the lock and club status switches.
 	wiringPiISR(0, INT_EDGE_BOTH, &lockISRCallback);
 	wiringPiISR(7, INT_EDGE_BOTH, &statusISRCallback);
 	
-	cout << "Club: Configured interrupts." << endl;
+	Club::log(LOG_INFO, "Club: Configured interrupts.");
 	
 	// Start update thread.
 	running = true;
 	updateThread.start(updater);
 	
-	cout << "Club: Started update thread." << endl;
+	Club::log(LOG_INFO, "Club: Started update thread.");
 	
 	return true;
 }
@@ -394,33 +438,34 @@ void Club::statusISRCallback() {
 
 // --- LOG ---
 void Club::log(Log_level level, string msg) {
+	logMutex.lock();
 	switch (level) {
 		case LOG_FATAL: {
-			cerr << "FATAL: " << msg << endl;
+			cerr << "FATAL:\t" << msg << endl;
 			string message = string("ClubStatus FATAL: ") + msg;
 			mqtt->sendMessage("/log/fatal", message);
 			break;
 		}
 		case LOG_ERROR: {
-			cerr << "ERROR: " << msg << endl;
+			cerr << "ERROR:\t" << msg << endl;
 			string message = string("ClubStatus ERROR: ") + msg;
 			mqtt->sendMessage("/log/error", message);
 			break;
 		}
 		case LOG_WARNING: {
-			cerr << "WARNING: " << msg << endl;
+			cerr << "WARNING:\t" << msg << endl;
 			string message = string("ClubStatus WARNING: ") + msg;
 			mqtt->sendMessage("/log/warning", message);
 			break;
 		}
 		case LOG_INFO: {
-			cout << "INFO: " << msg << endl;
+			cout << "INFO: \t" << msg << endl;
 			string message = string("ClubStatus INFO: ") + msg;
 			mqtt->sendMessage("/log/info", message);
 			break;
 		}
 		case LOG_DEBUG: {
-			cout << "DEBUG: " << msg << endl;
+			cout << "DEBUG:\t" << msg << endl;
 			string message = string("ClubStatus DEBUG: ") + msg;
 			mqtt->sendMessage("/log/debug", message);
 			break;
@@ -429,4 +474,6 @@ void Club::log(Log_level level, string msg) {
 			// Shouldn't get here.
 			break;
 	}
+	
+	logMutex.unlock();
 }

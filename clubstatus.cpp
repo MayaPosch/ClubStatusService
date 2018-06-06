@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 	Club::mqtt = &listener;
 	Club::start(relayactive, relayaddress, mqtt_topic);
 	
-	cout << "Started the Club." << endl;
+	//cout << "Started the Club." << endl;
 	
 	while(1) {
 		rc = listener.loop();

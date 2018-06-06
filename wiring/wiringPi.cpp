@@ -30,7 +30,7 @@ WiringTimer::WiringTimer() {
 	isr_7_set = false;
 	
 	// Start a timer which regularly triggers the interrupts for the two switch GPIO pins.
-	wiringTimer = new Poco::Timer(10 * 1000, 5 * 1000); // 5 s start delay & interval.
+	wiringTimer = new Poco::Timer(10 * 1000, 10 * 1000); // 5 s start delay & interval.
 	cb = new Poco::TimerCallback<WiringTimer>(*this, &WiringTimer::trigger);
 }
 	
@@ -148,7 +148,7 @@ int digitalRead(int pin) {
 		int val = PIN0VAL.get();
 		PIN0VAL.close();
 		
-		std::cout << "TEST: Reading pin 0: " << val << std::endl;
+		//std::cout << "TEST: Reading pin 0: " << val << std::endl;
 		
 		return val;
 	}
@@ -158,7 +158,7 @@ int digitalRead(int pin) {
 		int val = PIN7VAL.get();
 		PIN7VAL.close();
 		
-		std::cout << "TEST: Reading pin 7: " << val << std::endl;
+		//std::cout << "TEST: Reading pin 7: " << val << std::endl;
 		
 		return val;
 	}
@@ -169,7 +169,19 @@ int digitalRead(int pin) {
  
 int wiringPiISR(int pin, int mode, void (*function)(void)) {
 	// Initialize if necessary.
-	if (!Wiring::initialized) {
+	if (!Wiring::initialized) { 
+		// Set the pin's file to the default value.
+		char val = 0x01;
+		std::ofstream PIN0VAL;
+		std::ofstream PIN7VAL;
+		PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
+		PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
+		PIN0VAL.put(val);
+		val = 0x00;
+		PIN7VAL.put(val);
+		PIN0VAL.close();
+		PIN7VAL.close();
+		
 		Wiring::wt = std::make_unique<WiringTimer>();
 		Wiring::initialized = true;
 	}
@@ -185,18 +197,7 @@ int wiringPiISR(int pin, int mode, void (*function)(void)) {
 	}
 	
 	if (Wiring::wt->isr_0_set && Wiring::wt->isr_7_set) {
-		// Both interrupts have a callback set. 
-		// Set the pin's file to the default value (0).
-		char val = 0x01;
-		std::ofstream PIN0VAL;
-		std::ofstream PIN7VAL;
-		PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
-		PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
-		PIN0VAL.put(val);
-		val = 0x00;
-		PIN7VAL.put(val);
-		PIN0VAL.close();
-		PIN7VAL.close();
+		// Both interrupts have a callback set.
 		
 		// Start the interrupt timer.
 		Wiring::wt->start();
