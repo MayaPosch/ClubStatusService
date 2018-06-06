@@ -1,8 +1,17 @@
-LDFLAGS := $(LDFLAGS) -lmosquittopp -lmosquitto -lPocoNet -lPocoNetSSL -lPocoUtil -lPocoData -lPocoDataSQLite -lPocoFoundation -lwiringPi
-CFLAGS := $(CFLAGS) -g3 -std=c++11 -lpthread
+#
 
 TARGET = clubstatus
 SOURCES := $(wildcard *.cpp)
+
+ifdef TEST
+LDFLAGS := $(LDFLAGS) -lmosquittopp -lmosquitto -lPocoNet -lPocoNetSSL -lPocoUtil -lPocoData -lPocoSQLite -lPocoFoundation
+INCLUDES := -Iwiring
+SOURCES += $(wildcard wiring/*.cpp)
+else
+LDFLAGS := $(LDFLAGS) -lmosquittopp -lmosquitto -lPocoNet -lPocoNetSSL -lPocoUtil -lPocoData -lPocoDataSQLite -lPocoFoundation -lwiringPi
+endif
+
+CFLAGS := $(CFLAGS) -g3 -std=c++14 -lpthread $(INCLUDES)
 
 CC = g++
 

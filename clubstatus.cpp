@@ -47,12 +47,20 @@ int main(int argc, char* argv[]) {
 	if (argc > 1) { configFile = argv[1]; }
 	else { configFile = "config.ini"; }
 	
-	AutoPtr<IniFileConfiguration> config(new IniFileConfiguration(configFile));
+	AutoPtr<IniFileConfiguration> config;
+	try {
+		config = new IniFileConfiguration(configFile);
+	}
+	catch (Poco::IOException &e) {
+		cerr << "I/O exception when opening configuration file: " << configFile << ". Aborting..." << endl;
+		return 1;
+	}
+	
 	string mqtt_host = config->getString("MQTT.host", "localhost");
 	int mqtt_port = config->getInt("MQTT.port", 1883);
 	string mqtt_user = config->getString("MQTT.user", "");
 	string mqtt_pass = config->getString("MQTT.pass", "");
-	string mqtt_topic = config->getString("MQTT.clubStatusTopic", "/public/eden/clubstatus");
+	string mqtt_topic = config->getString("MQTT.clubStatusTopic", "/public/clubstatus");
 	bool relayactive = config->getBool("Relay.active", true);
 	uint8_t relayaddress = config->getInt("Relay.address", 0x20);
 	
@@ -62,6 +70,7 @@ int main(int argc, char* argv[]) {
 	cout << "Created listener, entering loop...\n";
 	
 	// Initialise the HTTP server.
+	// TODO: catch IOException if HTTP port is already taken.
 	UInt16 port = config->getInt("HTTP.port", 80);
 	HTTPServerParams* params = new HTTPServerParams;
 	params->setMaxQueued(100);
