@@ -101,7 +101,9 @@ void ClubUpdater::run() {
 	regOut0 = 0x00;
 	Club::powerOn = false;
 	powerTimerActive = false;
+	powerTimerStarted = false;
 	cb = new TimerCallback<ClubUpdater>(*this, &ClubUpdater::setPowerState);
+	timer = new Timer(10 * 1000, 0); // 10 second start interval.
 	
 	if (Club::relayActive) {
 		// First pulse the i2c's SCL a few times in order to unlock any frozen devices.
@@ -207,10 +209,27 @@ void ClubUpdater::updateStatus() {
 			timerMutex.unlock();
 		} */
 		
-		while (powerTimerActive) { Thread::sleep(500); }
+		//while (powerTimerActive) { Thread::sleep(500); }
 		
-		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		timer->start(*cb);
+		Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
+		
+		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
+		try {
+			if (!powerTimerStarted) {
+				timer->start(*cb);
+				powerTimerStarted = true;
+			}
+			else { timer->restart(); }
+		}
+		catch (Poco::IllegalStateException &e) {
+			Club::log(LOG_ERROR, "ClubUpdater: IllegalStateException on timer start: " + e.message());
+			return;
+		}
+		catch (...) {
+			Club::log(LOG_ERROR, "ClubUpdater: Unknown exception on timer start.");
+			return;
+		}
+		
 		powerTimerActive = true;
 		
 		Club::log(LOG_INFO, "ClubUpdater: Started power timer...");
@@ -242,10 +261,29 @@ void ClubUpdater::updateStatus() {
 			timerMutex.unlock();
 		} */
 		
-		while (powerTimerActive) { Thread::sleep(500); }
+		//while (powerTimerActive) { Thread::sleep(500); }
 		
-		timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		timer->start(*cb);
+		Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
+		
+		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
+		//Club::log(LOG_INFO, string("ClubUpdater: Created new timer."));
+		try {
+			if (!powerTimerStarted) {
+				timer->start(*cb);
+				powerTimerStarted = true;
+			}
+			else { timer->restart(); }
+		}
+		catch (Poco::IllegalStateException &e) {
+			Club::log(LOG_ERROR, "ClubUpdater: IllegalStateException on timer start: " + e.message());
+			return;
+		}
+		catch (...) {
+			Club::log(LOG_ERROR, "ClubUpdater: Unknown exception on timer start.");
+			return;
+		}
+		
+		Club::log(LOG_INFO, string("ClubUpdater: Started timer."));
 		powerTimerActive = true;
 		
 		Club::log(LOG_INFO, "ClubUpdater: Started power timer...");
@@ -345,10 +383,10 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	writeRelayOutputs();
 	
+	//delete timer;
 	powerTimerActive = false;
 	mutex.unlock();
 	
-	delete timer;
 	//timerCnd.signal();
 }
 
