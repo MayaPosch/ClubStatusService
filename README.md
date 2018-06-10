@@ -1,8 +1,8 @@
 # Club Status Service #
 
-This project is a simple C++-based service that monitors a number of switches, changing the status of four relays and publishing on an MQTT topic whenever the state of these two switches changes.
+This project is a simple C++-based service that monitors a number of switches or similar, changing the status of four relays and publishing on an MQTT topic whenever the state of these two switches changes.
 
-It is currently in use at Entropia as the club status service, setting club status lights and turning the power in the club on or off depending on whether the club status switch is set to 'on' or not.
+It is currently in use at the [Entropia hackerspace](https://entropia.de/Club-Status) as the club status service, setting club status lights and turning the power in the club on or off depending on whether the club status switch is set to 'on' or not.
 
 ## Features ##
 

@@ -211,7 +211,7 @@ void ClubUpdater::updateStatus() {
 		
 		//while (powerTimerActive) { Thread::sleep(500); }
 		
-		Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
+		//Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
 		
 		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
 		try {
@@ -263,7 +263,7 @@ void ClubUpdater::updateStatus() {
 		
 		//while (powerTimerActive) { Thread::sleep(500); }
 		
-		Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
+		//Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
 		
 		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
 		//Club::log(LOG_INFO, string("ClubUpdater: Created new timer."));
