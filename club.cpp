@@ -219,7 +219,11 @@ void ClubUpdater::updateStatus() {
 				timer->start(*cb);
 				powerTimerStarted = true;
 			}
-			else { timer->restart(); }
+			else { 
+				//timer->restart(); 
+				timer->stop();
+				timer->start(*cb);
+			}
 		}
 		catch (Poco::IllegalStateException &e) {
 			Club::log(LOG_ERROR, "ClubUpdater: IllegalStateException on timer start: " + e.message());
@@ -272,7 +276,11 @@ void ClubUpdater::updateStatus() {
 				timer->start(*cb);
 				powerTimerStarted = true;
 			}
-			else { timer->restart(); }
+			else { 
+				//timer->restart(); 
+				timer->stop();
+				timer->start(*cb);
+			}
 		}
 		catch (Poco::IllegalStateException &e) {
 			Club::log(LOG_ERROR, "ClubUpdater: IllegalStateException on timer start: " + e.message());
@@ -383,9 +391,13 @@ void ClubUpdater::setPowerState(Timer &t) {
 	
 	writeRelayOutputs();
 	
+	Club::log(LOG_DEBUG, "ClubUpdater: Written relay outputs.");
+	
 	//delete timer;
 	powerTimerActive = false;
 	mutex.unlock();
+	
+	Club::log(LOG_DEBUG, "ClubUpdater: Finished setPowerState.");
 	
 	//timerCnd.signal();
 }
