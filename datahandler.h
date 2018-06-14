@@ -34,7 +34,7 @@ public:
 		// Process the request. A request for data (HTML, JS, etc.) is returned
 		// with either the file & a 200 response, or a 404.
 		
-		cout << "DataHandler: Request from " + request.clientAddress().toString() << endl;
+		Club::log(LOG_INFO, "DataHandler: Request from " + request.clientAddress().toString());
 		
 		// Get the path and check for any endpoints to filter on.
 		URI uri(request.getURI());
@@ -46,7 +46,7 @@ public:
 		
 		File file(fileroot + path);
 		
-		cout << "DataHandler: Request for " << file.path() << endl;
+		Club::log(LOG_INFO, "DataHandler: Request for " + file.path());
 		
 		if (!file.exists() || file.isDirectory()) {
 			// Return a 404.
@@ -78,7 +78,7 @@ public:
 			response.sendFile(file.path(), mime);
 		}
 		catch (FileNotFoundException &e) {
-			cout << "File not found exception triggered...\n";
+			Club::log(LOG_ERROR, "DataHandler: File not found exception triggered...");
 			cerr << e.displayText() << endl;
 			
 			// Return a 404.
@@ -88,7 +88,7 @@ public:
 			return;
 		}
 		catch (OpenFileException &e) {
-			cout << "Open file exception triggered...\n";
+			Club::log(LOG_ERROR, "DataHandler: Open file exception triggered...");
 			cerr << e.displayText() << endl;
 			
 			// Return a 500.

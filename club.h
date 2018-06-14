@@ -109,7 +109,6 @@ public:
 	
 	static bool start(bool relayactive, uint8_t relayaddress, string topic);
 	static void stop();
-	static void togglePower();
 	static void setRelay();
 	static void log(Log_level level, string msg);
 };

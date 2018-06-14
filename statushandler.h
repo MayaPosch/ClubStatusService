@@ -37,7 +37,7 @@ public:
 		// * GET /clubstatus
 		// -> Returns the current club status.
 		
-		cout << "StatusHandler: Request from " + request.clientAddress().toString() << "\n";
+		Club::log(LOG_INFO, "StatusHandler: Request from " + request.clientAddress().toString());
 		
 		URI uri(request.getURI());
 		vector<string> parts;

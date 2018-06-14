@@ -15,20 +15,8 @@
 #include "listener.h"
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
 
 using namespace std;
-
-#include <Poco/StringTokenizer.h>
-#include <Poco/String.h>
-#include <Poco/Net/HTTPSClientSession.h>
-#include <Poco/Net/HTTPRequest.h>
-#include <Poco/Net/HTTPResponse.h>
-#include <Poco/Thread.h>
-#include <Poco/NumberFormatter.h>
-
-using namespace Poco;
 
 
 // --- CONSTRUCTOR ---
@@ -36,8 +24,6 @@ Listener::Listener(string clientId, string host, int port, string user, string p
 	int keepalive = 60;
 	username_pw_set(user.c_str(), pass.c_str());
 	connect(host.c_str(), port, keepalive);
-
-	// Done for now.
 }
 
 
@@ -49,7 +35,7 @@ Listener::~Listener() {
 
 // --- ON CONNECT ---
 void Listener::on_connect(int rc) {
-	cout << "Connected. Subscribing to topics...\n";
+	cout << "Connected. Subscribing to topics..." << endl;
 	
 	// Check code.
 	if (rc == 0) {
@@ -59,7 +45,7 @@ void Listener::on_connect(int rc) {
 	}
 	else {
 		// handle.
-		cerr << "Connection failed. Aborting subscribing.\n";
+		cerr << "Connection failed. Aborting subscribing." << endl;
 	}
 }
 
@@ -86,19 +72,11 @@ void Listener::on_subscribe(int mid, int qos_count, const int* granted_qos) {
 
 // --- SEND MESSAGE ---
 void Listener::sendMessage(string topic, string &message) {
-	//cout << "Listener: Sending MQTT message with length " << message.length() 
-	//		<< " on topic: " << topic << endl;
-	//cout << "Listener: Topic " << topic << ", message: 0x" << NumberFormatter::formatHex(*(uint8_t*)  message.data()) 
-	//		<< endl;
 	publish(0, topic.c_str(), message.length(), message.c_str(), true);
 }
 
 
 // --- SEND MESSAGE ---
 void Listener::sendMessage(string &topic, char* message, int msgLength) {
-	//cout << "Listener: Sending MQTT message with length " << msgLength 
-	//		<< " on topic: " << topic << endl;
-	//cout << "Listener: Topic " << topic << ", message: 0x" 
-	//		<< NumberFormatter::formatHex((uint8_t)  *message) << endl;
 	publish(0, topic.c_str(), msgLength, message, true);
 }
