@@ -35,12 +35,12 @@ using namespace Poco::Net;
 
 
 int main(int argc, char* argv[]) {
-	cout << "Starting ClubStatus server...\n";
+	Club::log(LOG_INFO, "Starting ClubStatus server...");
 	
 	int rc;
 	mosqpp::lib_init();
 	
-	cout << "Initialised C++ Mosquitto library.\n";
+	Club::log(LOG_INFO, "Initialised C++ Mosquitto library.");
 	
 	// Read configuration.
 	string configFile;
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 		config = new IniFileConfiguration(configFile);
 	}
 	catch (Poco::IOException &e) {
-		cerr << "I/O exception when opening configuration file: " << configFile << ". Aborting..." << endl;
+		Club::log(LOG_ERROR, "Main: I/O exception when opening configuration file: " + configFile + ". Aborting...");
 		return 1;
 	}
 	
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 	// Start the MQTT listener.
 	Listener listener("ClubStatus", mqtt_host, mqtt_port, mqtt_user, mqtt_pass);
 	
-	cout << "Created listener, entering loop...\n";
+	Club::log(LOG_INFO, "Created listener, entering loop...");
 	
 	// Initialise the HTTP server.
 	// TODO: catch IOException if HTTP port is already taken.
@@ -80,15 +80,15 @@ int main(int argc, char* argv[]) {
 		httpd.start();
 	}
 	catch (Poco::IOException &e) {
-		cerr << "I/O Exception on HTTP server: port already in use?" << endl;
+		Club::log(LOG_ERROR, "I/O Exception on HTTP server: port already in use?");
 		return 1;
 	}
 	catch (...) {
-		cerr << "Exception thrown for HTTP server start. Aborting." << endl;
+		Club::log(LOG_ERROR, "Exception thrown for HTTP server start. Aborting.");
 		return 1;
 	}
 	
-	cout << "Initialised the HTTP server." << endl;
+	Club::log(LOG_INFO, "Initialised the HTTP server.");
 	
 	// Initialise the GPIO and i2c-related handlers.
 	Club::mqtt = &listener;
@@ -99,12 +99,12 @@ int main(int argc, char* argv[]) {
 	while(1) {
 		rc = listener.loop();
 		if (rc){
-			cout << "Disconnected. Trying to reconnect...\n";
+			Club::log(LOG_ERROR, "Disconnected. Trying to reconnect...");
 			listener.reconnect();
 		}
 	}
 	
-	cout << "Cleanup...\n";
+	Club::log(LOG_INFO, "Cleanup...");
 
 	mosqpp::lib_cleanup();
 	httpd.stop();

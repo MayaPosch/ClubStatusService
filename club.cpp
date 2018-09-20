@@ -64,7 +64,7 @@ ClubUpdater Club::updater;
 bool Club::relayActive;
 uint8_t Club::relayAddress;
 string Club::mqttTopic;
-Listener* Club::mqtt;
+Listener* Club::mqtt = 0;
 
 Condition Club::clubCnd;
 Mutex Club::clubCndMutex;
@@ -196,31 +196,12 @@ void ClubUpdater::updateStatus() {
 		// Power has to be on. Write to relay with a 10 second delay.
 		Club::powerOn = true;
 		
-		// Wait on condition variable if another timer is active.
-		/* if (powerTimerActive) {
-			timerMutex.lock();
-			if (!timerCnd.tryWait(timerMutex, 30 * 1000)) {
-				// Time-out, cancel this timer.
-				timerMutex.unlock();
-				Club::log(LOG_ERROR, "ClubUpdater: 30s time-out on new power timer. Cancelling...");
-				return;
-			}
-			
-			timerMutex.unlock();
-		} */
-		
-		//while (powerTimerActive) { Thread::sleep(500); }
-		
-		//Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
-		
-		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
 		try {
 			if (!powerTimerStarted) {
 				timer->start(*cb);
 				powerTimerStarted = true;
 			}
-			else { 
-				//timer->restart(); 
+			else {
 				timer->stop();
 				timer->start(*cb);
 			}
@@ -252,32 +233,12 @@ void ClubUpdater::updateStatus() {
 		// Power has to be off. Write to relay with a 10 second delay.
 		Club::powerOn = false;
 		
-		// Wait on condition variable if another timer is active.
-		/* if (powerTimerActive) {
-			timerMutex.lock();
-			if (!timerCnd.tryWait(timerMutex, 30 * 1000)) {
-				// Time-out, cancel this timer.
-				timerMutex.unlock();
-				Club::log(LOG_ERROR, "ClubUpdater: 30s time-out on new power timer. Cancelling...");
-				return;
-			}
-		
-			timerMutex.unlock();
-		} */
-		
-		//while (powerTimerActive) { Thread::sleep(500); }
-		
-		//Club::log(LOG_INFO, string("ClubUpdater: Finished sleeping."));
-		
-		//timer = new Timer(10 * 1000, 0); // 10 second start interval.
-		//Club::log(LOG_INFO, string("ClubUpdater: Created new timer."));
 		try {
 			if (!powerTimerStarted) {
 				timer->start(*cb);
 				powerTimerStarted = true;
 			}
-			else { 
-				//timer->restart(); 
+			else {
 				timer->stop();
 				timer->start(*cb);
 			}
@@ -398,8 +359,6 @@ void ClubUpdater::setPowerState(Timer &t) {
 	mutex.unlock();
 	
 	Club::log(LOG_DEBUG, "ClubUpdater: Finished setPowerState.");
-	
-	//timerCnd.signal();
 }
 
 
@@ -493,31 +452,46 @@ void Club::log(Log_level level, string msg) {
 		case LOG_FATAL: {
 			cerr << "FATAL:\t" << msg << endl;
 			string message = string("ClubStatus FATAL: ") + msg;
-			mqtt->sendMessage("/log/fatal", message);
+			if (mqtt) {
+				mqtt->sendMessage("/log/fatal", message);
+			}
+			
 			break;
 		}
 		case LOG_ERROR: {
 			cerr << "ERROR:\t" << msg << endl;
 			string message = string("ClubStatus ERROR: ") + msg;
-			mqtt->sendMessage("/log/error", message);
+			if (mqtt) {
+				mqtt->sendMessage("/log/error", message);
+			}
+			
 			break;
 		}
 		case LOG_WARNING: {
 			cerr << "WARNING:\t" << msg << endl;
 			string message = string("ClubStatus WARNING: ") + msg;
-			mqtt->sendMessage("/log/warning", message);
+			if (mqtt) {
+				mqtt->sendMessage("/log/warning", message);
+			}
+			
 			break;
 		}
 		case LOG_INFO: {
 			cout << "INFO: \t" << msg << endl;
 			string message = string("ClubStatus INFO: ") + msg;
-			mqtt->sendMessage("/log/info", message);
+			if (mqtt) {
+				mqtt->sendMessage("/log/info", message);
+			}
+			
 			break;
 		}
 		case LOG_DEBUG: {
 			cout << "DEBUG:\t" << msg << endl;
 			string message = string("ClubStatus DEBUG: ") + msg;
-			mqtt->sendMessage("/log/debug", message);
+			if (mqtt) {
+				mqtt->sendMessage("/log/debug", message);
+			}
+			
 			break;
 		}
 		default:
