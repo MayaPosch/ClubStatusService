@@ -30,7 +30,7 @@ WiringTimer::WiringTimer() {
 	isr_7_set = false;
 	
 	// Start a timer which regularly triggers the interrupts for the two switch GPIO pins.
-	wiringTimer = new Poco::Timer(10 * 1000, 10 * 1000); // 5 s start delay & interval.
+	wiringTimer = new Poco::Timer(10 * 1000, 10 * 1000); // 10 s start delay & interval.
 	cb = new Poco::TimerCallback<WiringTimer>(*this, &WiringTimer::trigger);
 }
 	
@@ -48,11 +48,11 @@ void WiringTimer::trigger(Poco::Timer &t) {
 	// Pin 7: Status. 
 	// 
 	// Timing:
-	// The timer has a 5 second start delay.
+	// The timer has a 10 second start delay.
 	// 0. Trigger the lock pin.
-	// 1. followed by the status pin 5 seconds later. 
-	// 2. Wait five seconds, close status.
-	// 3. wait five, close lock. Wait 5s, repeat.
+	// 1. followed by the status pin 10 seconds later. 
+	// 2. Wait ten seconds, close status.
+	// 3. wait then, close lock. Wait 10s, repeat.
 	if (triggerCnt == 0) {
 		// Write pin value.
 		char val = 0x00; // locked false.
@@ -116,7 +116,20 @@ namespace Wiring {
 
 
 int wiringPiSetup() {
-	 // Nothing to set up for this mock-up.
+	// Set the pin's file to the default value.
+	char val = 0x01;
+	std::ofstream PIN0VAL;
+	std::ofstream PIN7VAL;
+	PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
+	PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
+	PIN0VAL.put(val);
+	val = 0x00;
+	PIN7VAL.put(val);
+	PIN0VAL.close();
+	PIN7VAL.close();
+	
+	Wiring::wt = std::make_unique<WiringTimer>();
+	Wiring::initialized = true;
 	 
 	return 0;
 }
@@ -168,22 +181,8 @@ int digitalRead(int pin) {
 
  
 int wiringPiISR(int pin, int mode, void (*function)(void)) {
-	// Initialize if necessary.
 	if (!Wiring::initialized) { 
-		// Set the pin's file to the default value.
-		char val = 0x01;
-		std::ofstream PIN0VAL;
-		std::ofstream PIN7VAL;
-		PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
-		PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
-		PIN0VAL.put(val);
-		val = 0x00;
-		PIN7VAL.put(val);
-		PIN0VAL.close();
-		PIN7VAL.close();
-		
-		Wiring::wt = std::make_unique<WiringTimer>();
-		Wiring::initialized = true;
+		return 1;
 	}
 	
 	// Registers the function pointer to call when the interrupt for the virtual pin gets triggered.
