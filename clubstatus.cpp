@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 	string mqtt_user = config->getString("MQTT.user", "");
 	string mqtt_pass = config->getString("MQTT.pass", "");
 	string mqtt_topic = config->getString("MQTT.clubStatusTopic", "/public/clubstatus");
-	bool relayactive = config->getBool("Relay.active", true);
+	bool relaypresent = config->getBool("Relay.present", true);
 	uint8_t relayaddress = config->getInt("Relay.address", 0x20);
 	
 	// Start the MQTT listener.
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 	
 	// Initialise the GPIO and i2c-related handlers.
 	Club::mqtt = &listener;
-	Club::start(relayactive, relayaddress, mqtt_topic);
+	Club::start(relaypresent, relayaddress, mqtt_topic);
 	
 	//cout << "Started the Club." << endl;
 	

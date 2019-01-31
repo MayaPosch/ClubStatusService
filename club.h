@@ -38,38 +38,26 @@ using namespace std;
 
 
 enum Log_level {
-	LOG_FATAL = 1,
-	LOG_ERROR = 2,
+	LOG_FATAL   = 1,
+	LOG_ERROR   = 2,
 	LOG_WARNING = 3,
-	LOG_INFO = 4,
-	LOG_DEBUG = 5
+	LOG_INFO    = 4,
+	LOG_DEBUG   = 5
 };
 
 
 class Listener;
 
 
-// TODO: refactor the power timer into its own module.
-/* class PowerTimer {
-	Condition* cnd;
-	
-public:
-	PowerTimer(Condition* cnd);
-	void start();
-}; */
-
-
 class ClubUpdater : public Runnable {
 	TimerCallback<ClubUpdater>* cb;
 	uint8_t regDir0;
 	uint8_t regOut0;
-	int i2cHandle;
+	int i2cRelayHandle;
 	Timer* timer;
 	Mutex mutex;
 	Mutex timerMutex;
-	Condition timerCnd;
 	bool powerTimerActive;
-	bool powerTimerStarted;
 	
 public:
 	void run();
@@ -87,27 +75,27 @@ class Club {
 	static void statusISRCallback();
 	
 public:
-	static bool clubOff;
-	static bool clubLocked;
+	static bool currentStatusSwitchValue;
+	static bool currentLockSwitchValue;
 	static bool powerOn;
 	static Listener* mqtt;
-	static bool relayActive;
+	static bool relayPresent;
 	static uint8_t relayAddress;
-	static string mqttTopic;	// Topic we publish status updates on.
+	static string mqttStatusTopic;	// Topic we publish status updates on.
 	
-	static Condition clubCnd;
-	static Mutex clubCndMutex;
+	static Condition clubCond;
+	static Mutex clubCondMutex;
 	static Mutex logMutex;
-	static bool clubChanged ;
+	static bool clubChanged;
 	static bool running;
 	static bool clubIsClosed;
 	static bool firstRun;
 	static bool lockChanged;
 	static bool statusChanged;
-	static bool previousLockValue;
-	static bool previousStatusValue;
+	static bool previousLockSwitchValue;
+	static bool previousStatusSwitchValue;
 	
-	static bool start(bool relayactive, uint8_t relayaddress, string topic);
+	static bool start(bool relaypresent, uint8_t relayaddress, string topic);
 	static void stop();
 	static void setRelay();
 	static void log(Log_level level, string msg);
