@@ -57,13 +57,15 @@ using namespace Poco;
 
 // Lock: 	header pin 11 - Pi Rev. 3 B / WiringPi: GPIO 0 - Pi Rev. 2: GPIO 17
 // Status: 	header pin 07 - Pi Rev. 3 B / WiringPi: GPIO 7 - Pi Rev. 2: GPIO 4
-#define GPIO_LOCK_FEEDBACK 0
-#define GPIO_STATUS_SWITCH 7
+//#define GPIO_LOCK_FEEDBACK 0
+//#define GPIO_STATUS_SWITCH 7
 
 // Static initialisations.
 bool Club::currentStatusSwitchValue;
 bool Club::currentLockSwitchValue;
 bool Club::powerOn;
+int Club::lock_pin;
+int Club::status_pin;
 Thread Club::updateThread;
 ClubUpdater Club::updater;
 bool Club::relayPresent;
@@ -349,12 +351,15 @@ void ClubUpdater::setPowerState(Timer &t) {
 
 // === CLUB ===
 // --- START ---
-bool Club::start(bool relaypresent, uint8_t relayaddress, string topic) {
+bool Club::start(bool relaypresent, uint8_t relayaddress, string topic, 
+															int gpio_lock, int gpio_status) {
 	Club::log(LOG_INFO, "Club: starting up...");
 	// Defaults.
 	relayPresent = relaypresent;
 	relayAddress = relayaddress;
 	mqttStatusTopic = topic;
+	lock_pin = gpio_lock;
+	status_pin = gpio_status;
 	
 	// Start the WiringPi framework.
 	// We assume that this service is running inside the 'gpio' group.
@@ -364,22 +369,22 @@ bool Club::start(bool relaypresent, uint8_t relayaddress, string topic) {
 	Club::log(LOG_INFO,  "Club: Finished wiringPi setup.");
 
 	// Configure and read current GPIO inputs.
-	pinMode(GPIO_LOCK_FEEDBACK, INPUT);
-	pinMode(GPIO_STATUS_SWITCH, INPUT);
-	pullUpDnControl(GPIO_LOCK_FEEDBACK, PUD_DOWN);
-	pullUpDnControl(GPIO_STATUS_SWITCH, PUD_DOWN);
+	pinMode(gpio_lock, INPUT);
+	pinMode(gpio_status, INPUT);
+	pullUpDnControl(gpio_lock, PUD_DOWN);
+	pullUpDnControl(gpio_status, PUD_DOWN);
 	
 	// The switch inputs are double-buffered to detect changes.
-	currentLockSwitchValue   =  digitalRead(GPIO_LOCK_FEEDBACK);
-	currentStatusSwitchValue = !digitalRead(GPIO_STATUS_SWITCH);
+	currentLockSwitchValue   =  digitalRead(gpio_lock);
+	currentStatusSwitchValue = !digitalRead(gpio_status);
 	previousLockSwitchValue   = currentLockSwitchValue;
 	previousStatusSwitchValue = currentStatusSwitchValue;
 	
 	Club::log(LOG_INFO, "Club: Finished configuring pins.");
 	
 	// Register GPIO interrupts for the lock and club status switches.
-	wiringPiISR(GPIO_LOCK_FEEDBACK, INT_EDGE_BOTH, &lockISRCallback);
-	wiringPiISR(GPIO_STATUS_SWITCH, INT_EDGE_BOTH, &statusISRCallback);
+	wiringPiISR(gpio_lock, INT_EDGE_BOTH, &lockISRCallback);
+	wiringPiISR(gpio_status, INT_EDGE_BOTH, &statusISRCallback);
 	
 	Club::log(LOG_INFO, "Club: Configured interrupts.");
 	
@@ -410,7 +415,7 @@ void Club::stop() {
 void Club::lockISRCallback() {
 	// the door lock opened / closed, triggering an interrupt. 
 	// Update the internal state clubLocked to reflect that.
-	currentLockSwitchValue = digitalRead(GPIO_LOCK_FEEDBACK);
+	currentLockSwitchValue = digitalRead(lock_pin);
 	lockChanged = true;
 	
 	// set clubChanged flag
@@ -422,7 +427,7 @@ void Club::lockISRCallback() {
 // --- STATUS ISR CALLBACK ---
 void Club::statusISRCallback() {
 	// Update the current status GPIO value.
-	currentStatusSwitchValue = !digitalRead(GPIO_STATUS_SWITCH);
+	currentStatusSwitchValue = !digitalRead(status_pin);
 	statusChanged = true;
 	
 	// set clubChanged flag

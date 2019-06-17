@@ -54,10 +54,10 @@ class WiringTimer {
 	uint8_t triggerCnt;
 	
 public:
-	ISRCB isrcb_0;
-	ISRCB isrcb_7;
-	bool isr_0_set;
-	bool isr_7_set;
+	ISRCB isrcb_lock;
+	ISRCB isrcb_status;
+	bool isr_lock_set;
+	bool isr_status_set;
 	
 	WiringTimer();
 	~WiringTimer();

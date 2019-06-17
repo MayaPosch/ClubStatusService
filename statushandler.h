@@ -49,8 +49,8 @@ public:
 		// First path segment is 'clubstatus'.
 		if (parts.size() == 1) {
 			ostream& ostr = response.send();
-			ostr << "{ \"clubstatus\": " << !Club::clubOff << ",";
-			ostr << "\"lock\": " << Club::clubLocked << ",";
+			ostr << "{ \"clubstatus\": " << !Club::currentStatusSwitchValue << ",";
+			ostr << "\"lock\": " << Club::currentLockSwitchValue << ",";
 			ostr << "\"power\": " << Club::powerOn << "";
 			ostr << "}";
 		}

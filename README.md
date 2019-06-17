@@ -23,10 +23,12 @@ At Entropia we use the above linked relay board, with four relays (channel 1-4).
 
 ## GPIO switches ##
 
-The project is hard-wired to expect the following two switches on its GPIO pins:
+The project is by default configured to expect the following two switches on its GPIO pins:
 
-* BCM GPIO 17 (#11, WiringPi 0) => Door lock switch.
-* BCM GPIO 4 (#7, WiringPi 7)   => Club status switch.
+* BCM GPIO 23 (#16, WiringPi 4) => Door lock switch.
+* BCM GPIO 26 (#37, WiringPi 25)   => Club status switch.
+
+This matches the first two channels of the [Nyantronics Debounce HAT](http://www.nyantronics.com/debounce_hat.php "Nyantronics Debounce HAT") for the Raspberry Pi. These GPIO pins can be reconfigured in the configuration file.
 
 The door lock switch in combination with the status switch produces the following truth table:
 
@@ -86,7 +88,19 @@ The payload contains a string with the format:
 
 `ClubStatus <log level>: <message>`
 
+
+## Integration test ##
+
+The project's integration test allows the code to run on a PC without WiringPi support. It uses a mock-up of the WiringPi library and the relays, along with simulated switch activation using a timer. This allows for code validation without having to use real hardware.
+
+The integration test binary can be built with the following command in the project root folder:
+
+`make TEST=1`
+
+After this the binary (`clubstatus`) can be run from the same folder.
+
+
 ## Notes ##
 
 * This project was developed for a single environment and hardware demands. It may not fit a different environment, but PRs are always welcome.
-* Any connected switches must be fully debounced. A Raspberry Debounce HAT project can be found at: [https://github.com/MayaPosch/DebounceHat](https://github.com/MayaPosch/DebounceHat "Debounce HAT"). At Entropia we currently use a prototype version of that board.
+* Any connected switches must be fully debounced. A Raspberry Pi Debounce HAT project can be found at: [https://github.com/MayaPosch/DebounceHat](https://github.com/MayaPosch/DebounceHat "Debounce HAT"). At Entropia we currently use a prototype version of that board.

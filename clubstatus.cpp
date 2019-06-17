@@ -64,6 +64,10 @@ int main(int argc, char* argv[]) {
 	bool relaypresent = config->getBool("Relay.present", true);
 	uint8_t relayaddress = config->getInt("Relay.address", 0x20);
 	
+	// GPIO configuration.
+	int gpio_lock = config->getInt("GPIO.lock_pin", 4);
+	int gpio_status = config->getInt("GPIO.status_pin", 25);
+	
 	// Start the MQTT listener.
 	Listener listener("ClubStatus", mqtt_host, mqtt_port, mqtt_user, mqtt_pass);
 	
@@ -92,7 +96,7 @@ int main(int argc, char* argv[]) {
 	
 	// Initialise the GPIO and i2c-related handlers.
 	Club::mqtt = &listener;
-	Club::start(relaypresent, relayaddress, mqtt_topic);
+	Club::start(relaypresent, relayaddress, mqtt_topic, gpio_lock, gpio_status);
 	
 	//cout << "Started the Club." << endl;
 	

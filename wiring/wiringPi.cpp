@@ -24,10 +24,10 @@
 WiringTimer::WiringTimer() {
 	// Defaults.
 	triggerCnt = 0;
-	isrcb_0 = 0;
-	isrcb_7 = 0;
-	isr_0_set = false;
-	isr_7_set = false;
+	isrcb_lock = 0;
+	isrcb_status = 0;
+	isr_lock_set = false;
+	isr_status_set = false;
 	
 	// Start a timer which regularly triggers the interrupts for the two switch GPIO pins.
 	wiringTimer = new Poco::Timer(10 * 1000, 10 * 1000); // 10 s start delay & interval.
@@ -44,8 +44,8 @@ void WiringTimer::start() {
 }
 	
 void WiringTimer::trigger(Poco::Timer &t) {
-	// Pin 0: Lock.
-	// Pin 7: Status. 
+	// Pin 4: Lock.
+	// Pin 25: Status. 
 	// 
 	// Timing:
 	// The timer has a 10 second start delay.
@@ -56,52 +56,52 @@ void WiringTimer::trigger(Poco::Timer &t) {
 	if (triggerCnt == 0) {
 		// Write pin value.
 		char val = 0x00; // locked false.
-		std::ofstream PIN0VAL;
-		PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
-		PIN0VAL.put(val);
-		PIN0VAL.close();
+		std::ofstream LOCKVAL;
+		LOCKVAL.open("lockval", std::ios_base::binary | std::ios_base::trunc);
+		LOCKVAL.put(val);
+		LOCKVAL.close();
 		
 		// Call callback.
-		isrcb_0();
+		isrcb_lock();
 		
 		++triggerCnt;
 	}
 	else if (triggerCnt == 1) {
 		// Write pin value.
 		char val = 0x01; // off false.
-		std::ofstream PIN7VAL;
-		PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
-		PIN7VAL.put(val);
-		PIN7VAL.close();
+		std::ofstream STATUSVAL;
+		STATUSVAL.open("statusval", std::ios_base::binary | std::ios_base::trunc);
+		STATUSVAL.put(val);
+		STATUSVAL.close();
 		
 		// Call callback.
-		isrcb_7();
+		isrcb_status();
 		
 		++triggerCnt;
 	}
 	else if (triggerCnt == 2) {
 		// Write pin value.
 		char val = 0x00; // off true.
-		std::ofstream PIN7VAL;
-		PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
-		PIN7VAL.put(val);
-		PIN7VAL.close();
+		std::ofstream STATUSVAL;
+		STATUSVAL.open("statusval", std::ios_base::binary | std::ios_base::trunc);
+		STATUSVAL.put(val);
+		STATUSVAL.close();
 		
 		// Call callback.
-		isrcb_7();
+		isrcb_status();
 		
 		++triggerCnt;
 	}
 	else if (triggerCnt == 3) {
 		// Write pin value.
 		char val = 0x01; // locked true.
-		std::ofstream PIN0VAL;
-		PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
-		PIN0VAL.put(val);
-		PIN0VAL.close();
+		std::ofstream LOCKVAL;
+		LOCKVAL.open("lockval", std::ios_base::binary | std::ios_base::trunc);
+		LOCKVAL.put(val);
+		LOCKVAL.close();
 		
 		// Call callback.
-		isrcb_0();
+		isrcb_lock();
 		
 		triggerCnt = 0; // reset
 	}
@@ -118,15 +118,15 @@ namespace Wiring {
 int wiringPiSetup() {
 	// Set the pin's file to the default value.
 	char val = 0x01;
-	std::ofstream PIN0VAL;
-	std::ofstream PIN7VAL;
-	PIN0VAL.open("pin0val", std::ios_base::binary | std::ios_base::trunc);
-	PIN7VAL.open("pin7val", std::ios_base::binary | std::ios_base::trunc);
-	PIN0VAL.put(val);
+	std::ofstream LOCKVAL;
+	std::ofstream STATUSVAL;
+	LOCKVAL.open("lockval", std::ios_base::binary | std::ios_base::trunc);
+	STATUSVAL.open("statusval", std::ios_base::binary | std::ios_base::trunc);
+	LOCKVAL.put(val);
 	val = 0x00;
-	PIN7VAL.put(val);
-	PIN0VAL.close();
-	PIN7VAL.close();
+	STATUSVAL.put(val);
+	LOCKVAL.close();
+	STATUSVAL.close();
 	
 	Wiring::wt = std::make_unique<WiringTimer>();
 	Wiring::initialized = true;
@@ -155,21 +155,21 @@ int digitalRead(int pin) {
 	// Return the current value for the virtual pin.	
 	// Open the respective pin's file and read out its value (first character).
 	// Return either a 0 or 1.
-	if (pin == 0) {
-		std::ifstream PIN0VAL;
-		PIN0VAL.open("pin0val", std::ios_base::binary);
-		int val = PIN0VAL.get();
-		PIN0VAL.close();
+	if (pin == 4) {
+		std::ifstream LOCKVAL;
+		LOCKVAL.open("lockval", std::ios_base::binary);
+		int val = LOCKVAL.get();
+		LOCKVAL.close();
 		
 		//std::cout << "TEST: Reading pin 0: " << val << std::endl;
 		
 		return val;
 	}
-	else if (pin == 7) {
-		std::ifstream PIN7VAL;
-		PIN7VAL.open("pin7val", std::ios_base::binary);
-		int val = PIN7VAL.get();
-		PIN7VAL.close();
+	else if (pin == 25) {
+		std::ifstream STATUSVAL;
+		STATUSVAL.open("statusval", std::ios_base::binary);
+		int val = STATUSVAL.get();
+		STATUSVAL.close();
 		
 		//std::cout << "TEST: Reading pin 7: " << val << std::endl;
 		
@@ -186,16 +186,16 @@ int wiringPiISR(int pin, int mode, void (*function)(void)) {
 	}
 	
 	// Registers the function pointer to call when the interrupt for the virtual pin gets triggered.
-	if (pin == 0) { 
-		Wiring::wt->isrcb_0 = function;
-		Wiring::wt->isr_0_set = true;
+	if (pin == 4) { 
+		Wiring::wt->isrcb_lock = function;
+		Wiring::wt->isr_lock_set = true;
 	}
-	else if (pin == 7) {
-		Wiring::wt->isrcb_7 = function;
-		Wiring::wt->isr_7_set = true;
+	else if (pin == 25) {
+		Wiring::wt->isrcb_status = function;
+		Wiring::wt->isr_status_set = true;
 	}
 	
-	if (Wiring::wt->isr_0_set && Wiring::wt->isr_7_set) {
+	if (Wiring::wt->isr_lock_set && Wiring::wt->isr_status_set) {
 		// Both interrupts have a callback set.
 		
 		// Start the interrupt timer.

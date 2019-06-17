@@ -1,0 +1,6 @@
+*.log
+*val
+clubstatus
+*.exe
+*.db
+

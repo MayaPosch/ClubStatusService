@@ -74,6 +74,9 @@ class Club {
 	static void lockISRCallback();
 	static void statusISRCallback();
 	
+	static int lock_pin;
+	static int status_pin;
+	
 public:
 	static bool currentStatusSwitchValue;
 	static bool currentLockSwitchValue;
@@ -95,7 +98,8 @@ public:
 	static bool previousLockSwitchValue;
 	static bool previousStatusSwitchValue;
 	
-	static bool start(bool relaypresent, uint8_t relayaddress, string topic);
+	static bool start(bool relaypresent, uint8_t relayaddress, string topic, 
+						int gpio_lock, int gpio_status);
 	static void stop();
 	static void setRelay();
 	static void log(Log_level level, string msg);
